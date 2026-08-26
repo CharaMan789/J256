@@ -23,9 +23,13 @@ from pseudonyms import generate_pseudonym
 from reactions import reaction_counts, my_reaction, toggle_reaction
 
 BASE_DIR = Path(__file__).parent
-UPLOAD_DIR = BASE_DIR.parent / "frontend" / "uploads"
+# Capital "Frontend" — must match the exact folder name in the repo. On
+# Windows/Mac this would silently work either way, but Render's Linux
+# filesystem is case-sensitive, so a mismatch here means these mounts
+# point at a folder that doesn't exist and everything under them 404s.
+UPLOAD_DIR = BASE_DIR.parent / "Frontend" / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-FRONTEND_DIR = BASE_DIR.parent / "frontend"
+FRONTEND_DIR = BASE_DIR.parent / "Frontend"
 
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "dev-secret-change-me-in-.env")
 VALID_KINDS = {"image", "video", "file"}
