@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+python-multipart
+authlib
+httpx
+itsdangerous
+python-dotenv
+reportlab
+pillow
