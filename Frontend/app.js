@@ -499,9 +499,7 @@ async function renderExploreDetail() {
         <h1 class="article-detail-title" style="font-size:28px;">${escapeHtml(p.title)}</h1>
         <div class="article-detail-body" style="font-size:16px;">${renderFormattedBody(p.body)}</div>
         ${attachmentsRow(p.attachments)}
-        <div class="post-card-footer">${reactionButtonsHtml("explore", p)}${reportButtonHtml("explore", p.id)}</div>
-
-        <div class="reply-section">
+        <div class="post-card-footer">${reactionButtonsHtml("explore", p)}<div class="post-card-actions-right">${reportButtonHtml("explore", p.id)}${deleteButtonHtml(p)}</div></div>
           <h3 class="reply-heading">${p.replies.length} repl${p.replies.length === 1 ? "y" : "ies"}</h3>
           <div class="reply-list" id="replyList">
             ${p.replies.length === 0
@@ -533,6 +531,7 @@ async function renderExploreDetail() {
     document.getElementById("backToExplore").addEventListener("click", goToExploreFeed);
     wireReplyComposer(p);
     wireReportButtons();
+    wireDeleteButtons();
     wireReactionButtons();
   } catch (e) {
     appEl.innerHTML = `<div class="page-wrap"><p class="empty-state">Couldn't load this post.<br>${escapeHtml(e.message)}</p></div>`;
@@ -1516,6 +1515,32 @@ function wireReportButtons(root) {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       reportPost(btn.dataset.reportKind, btn.dataset.reportId, btn);
+    });
+  });
+}
+
+// Delete is only ever shown when the backend says is_mine — which the
+// backend deliberately sets to false for anonymous posts (see explore.py
+// delete_explore_post), so an anonymous author never sees this button and
+// the "anonymous posts are permanent" rule holds without extra checks here.
+function deleteButtonHtml(post) {
+  if (!post.is_mine) return "";
+  return `<button class="delete-post-btn" data-delete-id="${post.id}">Delete</button>`;
+}
+
+function wireDeleteButtons(root) {
+  (root || document).querySelectorAll(".delete-post-btn").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (!confirm("Delete this post? This can't be undone.")) return;
+      btn.disabled = true;
+      try {
+        await fetchJSON(`${API}/explore/${btn.dataset.deleteId}`, { method: "DELETE" });
+        goToExploreFeed();
+      } catch (err) {
+        alert(err.message);
+        btn.disabled = false;
+      }
     });
   });
 }

@@ -2025,6 +2025,33 @@ select:focus-visible {
   color: var(--red);
 }
 
+.delete-post-btn {
+  font-family: var(--body-font);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--red);
+  background: none;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  transition: opacity .15s ease;
+}
+
+.delete-post-btn:hover {
+  opacity: .7;
+}
+
+.delete-post-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.post-card-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
 .report-btn:disabled {
   color: var(--faint);
   cursor: default;
@@ -2141,6 +2168,16 @@ select:focus-visible {
   .explore-header-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  /* On mobile the row stacks vertically, but the Post button should stay
+     pinned to the right on its own line rather than left-aligning under
+     the title — left-aligned made it blend into the page text and was
+     easy to miss; a self-aligned-right full-width row keeps it visually
+     separated and easy to spot with a thumb. */
+  .post-type-menu-wrap {
+    align-self: flex-end;
+    margin-top: 4px;
   }
 
   .post-card-title {
