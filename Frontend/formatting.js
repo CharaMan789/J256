@@ -135,6 +135,21 @@ function renderFormattedBody(rawText) {
   if (!rawText) return "";
   let html = escapeHtml(rawText);
 
+  // Auto-link plain URLs (http/https, and bare www.) before any other
+  // syntax touches the text, so a link pasted next to **bold** or a
+  // $formula$ doesn't get split apart by those rules. Stops at markdown
+  // delimiter characters (* _ ` $ [ ]) and common trailing punctuation,
+  // so "check this out: https://youtu.be/xyz." doesn't swallow the
+  // trailing period, and a URL sitting right before **bold** doesn't eat
+  // the ** as part of itself.
+  html = html.replace(
+    /\b((?:https?:\/\/|www\.)[^\s<>"'*_`$\[\]]+[^\s<>"'*_`$\[\].,!?:;)])/gi,
+    (match) => {
+      const href = /^https?:\/\//i.test(match) ? match : `https://${match}`;
+      return `<a href="${href}" target="_blank" rel="noopener noreferrer nofollow">${match}</a>`;
+    },
+  );
+
   // Block LaTeX first ($$...$$), so a lone $ inside it isn't later
   // mistaken for the start of an inline span.
   html = html.replace(/\$\$([\s\S]+?)\$\$/g, (match, expr) => renderLatex(expr, true));

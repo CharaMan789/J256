@@ -387,6 +387,7 @@ function attachmentsRow(atts) {
   if (!atts || atts.length === 0) return "";
   return `<div class="post-card-attachments">${atts.map(a => {
     if (a.kind === "video") return `<video src="${API}${a.url}" controls></video>`;
+    if (a.kind === "audio") return `<audio src="${API}${a.url}" controls></audio>`;
     if (a.kind === "file") return `<div class="doc-attachment-file">${ICONS.file} <a href="${API}${a.url}" target="_blank">${escapeHtml(a.original_name)}</a></div>`;
     return `<img src="${API}${a.url}" alt="">`;
   }).join("")}</div>`;
@@ -505,7 +506,7 @@ async function renderExploreDetail() {
           <div class="reply-list" id="replyList">
             ${p.replies.length === 0
               ? `<p class="empty-state" style="padding:20px 0;">No replies yet.</p>`
-              : p.replies.map(replyItem).join("")}
+              : p.replies.map(r => replyItem(r, 0)).join("")}
           </div>
 
           <div class="reply-composer">
@@ -538,23 +539,62 @@ async function renderExploreDetail() {
   }
 }
 
-function replyItem(r) {
+function replyItem(r, depth) {
+  depth = depth || 0;
+  const children = (r.children || []).map(c => replyItem(c, depth + 1)).join("");
   return `
-    <div class="reply-item">
+    <div class="reply-item" data-reply-id="${r.id}" style="${depth > 0 ? `margin-left:${Math.min(depth, 4) * 22}px;` : ""}">
       <div class="post-card-meta">${escapeHtml(r.author)}${r.is_anonymous ? " (anon)" : ""}${opBadgeHtml(r.is_op)} · ${timeAgo(r.created_at)}</div>
       <p class="reply-body">${renderFormattedBody(r.body)}</p>
       ${attachmentsRow(r.attachments)}
-      <div class="post-card-footer">${reactionButtonsHtml("explore_reply", r)}</div>
+      <div class="post-card-footer">
+        ${reactionButtonsHtml("explore_reply", r)}
+        <button class="reply-to-reply-btn" data-reply-id="${r.id}" data-reply-author="${escapeHtml(r.author)}">Reply</button>
+      </div>
     </div>
+    ${children}
   `;
 }
 
 function wireReplyComposer(post) {
   let stagedFile = null;
+  let replyingToId = null;
   const fileInput = document.getElementById("replyFileInput");
   const replyInputEl = document.getElementById("replyInput");
   wireFormatToolbar("reply", replyInputEl);
   replyInputEl.addEventListener("input", (e) => updateLivePreview("replyLivePreview", e.target.value));
+
+  function setReplyingTo(replyId, authorName) {
+    replyingToId = replyId;
+    let indicator = document.getElementById("replyingToIndicator");
+    if (!indicator) {
+      indicator = document.createElement("div");
+      indicator.id = "replyingToIndicator";
+      indicator.className = "replying-to-indicator";
+      replyInputEl.parentElement.insertBefore(indicator, replyInputEl);
+    }
+    if (replyId) {
+      indicator.innerHTML = `Replying to ${escapeHtml(authorName)} <button type="button" id="cancelReplyTo">${ICONS.x}</button>`;
+      indicator.hidden = false;
+      document.getElementById("cancelReplyTo").addEventListener("click", () => setReplyingTo(null, null));
+      replyInputEl.focus();
+    } else {
+      indicator.hidden = true;
+    }
+  }
+
+  // Delegated so it keeps working after renderExploreDetail() re-renders
+  // the reply list (e.g. right after posting a reply).
+  document.addEventListener("click", function replyToReplyHandler(e) {
+    if (!document.body.contains(document.getElementById("sendReplyBtn"))) {
+      document.removeEventListener("click", replyToReplyHandler);
+      return;
+    }
+    const btn = e.target.closest(".reply-to-reply-btn");
+    if (!btn) return;
+    if (!requireLogin()) return;
+    setReplyingTo(btn.dataset.replyId, btn.dataset.replyAuthor);
+  });
 
   document.getElementById("replyAttachBtn").addEventListener("click", () => {
     if (!requireLogin()) return;
@@ -591,6 +631,7 @@ function wireReplyComposer(post) {
       const formData = new FormData();
       formData.set("body", body);
       formData.set("is_anonymous", document.getElementById("replyAnonCheckbox").checked ? "true" : "false");
+      if (replyingToId) formData.set("parent_reply_id", replyingToId);
       if (stagedFile) formData.set("file", stagedFile);
       await fetchJSON(`${API}/explore/${post.id}/replies`, { method: "POST", body: formData });
       renderExploreDetail();
@@ -651,7 +692,12 @@ function renderComposeAttachmentsPreview() {
   container.innerHTML = exploreComposeFiles.map((f, i) => {
     const url = URL.createObjectURL(f);
     const isVideo = f.type.startsWith("video/");
-    const inner = isVideo ? `<video src="${url}" controls></video>` : `<img src="${url}" alt="">`;
+    const isAudio = f.type.startsWith("audio/");
+    const inner = isVideo
+      ? `<video src="${url}" controls></video>`
+      : isAudio
+      ? `<audio src="${url}" controls></audio>`
+      : `<img src="${url}" alt="">`;
     return `
       <div class="doc-attachment" data-idx="${i}">
         ${inner}
@@ -874,6 +920,7 @@ async function renderArticleDetail(id) {
     const media = a.attachments.map(att => {
       if (att.kind === "image") return `<img src="${API}${att.url}" alt="">`;
       if (att.kind === "video") return `<video src="${API}${att.url}" controls></video>`;
+      if (att.kind === "audio") return `<audio src="${API}${att.url}" controls></audio>`;
       return `<div class="doc-attachment-file">${ICONS.file} <a href="${API}${att.url}" target="_blank">${escapeHtml(att.original_name)}</a></div>`;
     }).join("");
     appEl.innerHTML = `
@@ -1090,6 +1137,7 @@ function renderAttachmentsList() {
     let inner;
     if (att.kind === "image") inner = `<img src="${API}${att.url}" alt="">`;
     else if (att.kind === "video") inner = `<video src="${API}${att.url}" controls></video>`;
+    else if (att.kind === "audio") inner = `<audio src="${API}${att.url}" controls></audio>`;
     else inner = `<div class="doc-attachment-file">${ICONS.file} ${escapeHtml(att.original_name)}</div>`;
     return `
       <div class="doc-attachment" data-id="${att.id}">

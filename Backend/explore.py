@@ -21,6 +21,7 @@ UPLOAD_DIR = BASE_DIR.parent / "Frontend" / "uploads"
 
 VALID_TYPES = {"poll", "discussion", "announcement"}
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm", ".mkv", ".avi"}
+AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac"}
 
 EXPLORE_SELECT = """
     SELECT explore_posts.*, users.name AS user_name, users.picture AS user_picture,
@@ -71,7 +72,12 @@ def _save_attachments(conn, owner_type, owner_id, files):
         if not f or not f.filename:
             continue
         ext = Path(f.filename).suffix.lower()
-        kind = "video" if ext in VIDEO_EXTENSIONS else "image"
+        if ext in VIDEO_EXTENSIONS:
+            kind = "video"
+        elif ext in AUDIO_EXTENSIONS:
+            kind = "audio"
+        else:
+            kind = "image"
         stored_name = f"{uuid.uuid4().hex}{ext}"
         dest = UPLOAD_DIR / stored_name
         with dest.open("wb") as out:
@@ -151,9 +157,29 @@ def _post_to_dict(conn, row, user, include_replies=False):
                 REPLY_SELECT + " WHERE explore_replies.post_id = ? ORDER BY explore_replies.created_at ASC",
                 (row["id"],),
             ).fetchall()
-            d["replies"] = [_reply_to_dict(conn, r, user, row["user_id"]) for r in replies]
+            d["replies"] = _build_reply_tree(conn, replies, user, row["user_id"])
 
     return d
+
+
+def _build_reply_tree(conn, rows, user, post_author_id):
+    """Turns the flat, chronologically-ordered explore_replies rows for a
+    post into a nested tree, one level: each reply carries a "children"
+    list of the replies made directly to it. Fetched as one flat query
+    (cheap, one round trip) and assembled here rather than querying per
+    parent, then reassembled by parent_reply_id — O(n) either way, but
+    this keeps it to a single SELECT regardless of thread depth/width."""
+    by_id = {}
+    roots = []
+    for row in rows:
+        d = _reply_to_dict(conn, row, user, post_author_id)
+        d["children"] = []
+        by_id[row["id"]] = d
+        if row["parent_reply_id"] and row["parent_reply_id"] in by_id:
+            by_id[row["parent_reply_id"]]["children"].append(d)
+        else:
+            roots.append(d)
+    return roots
 
 
 def _reply_to_dict(conn, row, user, post_author_id):
@@ -162,6 +188,7 @@ def _reply_to_dict(conn, row, user, post_author_id):
     d = {
         "id": row["id"],
         "post_id": row["post_id"],
+        "parent_reply_id": row["parent_reply_id"],
         "body": row["body"],
         "created_at": row["created_at"],
         "is_mine": bool(user) and not is_anon and row["user_id"] == user["id"],
@@ -395,6 +422,7 @@ async def create_reply(
     post_id: int,
     body: str = Form(...),
     is_anonymous: bool = Form(False),
+    parent_reply_id: int | None = Form(None),
     file: UploadFile | None = File(None),
     user: dict = Depends(require_user),
 ):
@@ -402,10 +430,17 @@ async def create_reply(
         post = conn.execute("SELECT * FROM explore_posts WHERE id = ?", (post_id,)).fetchone()
         if not post or post["type"] != "discussion":
             raise HTTPException(404, "Not found")
+        if parent_reply_id is not None:
+            parent = conn.execute(
+                "SELECT id FROM explore_replies WHERE id = ? AND post_id = ?",
+                (parent_reply_id, post_id),
+            ).fetchone()
+            if not parent:
+                raise HTTPException(400, "That reply doesn't belong to this post")
         cur = conn.execute(
-            "INSERT INTO explore_replies (post_id, user_id, is_anonymous, body, anon_pseudonym) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (post_id, user["id"], int(is_anonymous), body, _new_anon_pseudonym(is_anonymous)),
+            "INSERT INTO explore_replies (post_id, user_id, is_anonymous, body, anon_pseudonym, parent_reply_id) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (post_id, user["id"], int(is_anonymous), body, _new_anon_pseudonym(is_anonymous), parent_reply_id),
         )
         reply_id = cur.lastrowid
         if file and file.filename:

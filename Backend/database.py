@@ -299,17 +299,37 @@ def init_db():
             )
         """)
         _add_column_if_missing(conn, "explore_replies", "anon_pseudonym", "anon_pseudonym TEXT")
+        # Reply-to-reply nesting (2026-08-27): NULL means a top-level reply
+        # to the post itself, same as every reply before this column
+        # existed — so no backfill needed, old data reads correctly as-is.
+        # A non-NULL value points at the explore_replies row being replied
+        # to, one level deep is all the UI needs to support threading; the
+        # column itself doesn't enforce a depth limit.
+        _add_column_if_missing(
+            conn, "explore_replies", "parent_reply_id",
+            "parent_reply_id INTEGER REFERENCES explore_replies(id)",
+        )
         conn.execute("""
             CREATE TABLE IF NOT EXISTS explore_attachments (
                 id SERIAL PRIMARY KEY,
                 owner_type TEXT NOT NULL CHECK (owner_type IN ('post', 'reply')),
                 owner_id INTEGER NOT NULL,
-                kind TEXT NOT NULL CHECK (kind IN ('image', 'video')),
+                kind TEXT NOT NULL CHECK (kind IN ('image', 'video', 'audio')),
                 file_path TEXT NOT NULL,
                 original_name TEXT NOT NULL,
                 uploaded_at TEXT NOT NULL DEFAULT (NOW())
             )
         """)
+        # Same situation as the reactions constraint below: Postgres won't
+        # widen an inline CHECK via ALTER TABLE ADD COLUMN, and this table
+        # may already exist on Render with the old, narrower constraint
+        # (no 'audio'). Drop and recreate under Postgres's default
+        # auto-generated constraint name; a no-op once already applied.
+        conn.execute("ALTER TABLE explore_attachments DROP CONSTRAINT IF EXISTS explore_attachments_kind_check")
+        conn.execute(
+            "ALTER TABLE explore_attachments ADD CONSTRAINT explore_attachments_kind_check "
+            "CHECK (kind IN ('image', 'video', 'audio'))"
+        )
 
         # --- Reactions: thumbs up/down on a post OR a discussion reply.
         # One reaction per user per (post_kind, post_id) — switching from
