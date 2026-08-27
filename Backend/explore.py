@@ -158,6 +158,7 @@ def _post_to_dict(conn, row, user, include_replies=False):
 
 def _reply_to_dict(conn, row, user, post_author_id):
     is_anon = bool(row["is_anonymous"])
+    like_count, dislike_count = reaction_counts(conn, "explore_reply", row["id"])
     d = {
         "id": row["id"],
         "post_id": row["post_id"],
@@ -170,6 +171,9 @@ def _reply_to_dict(conn, row, user, post_author_id):
         # pseudonym than their original (possibly also anonymous) post.
         "is_op": row["user_id"] == post_author_id,
         "attachments": _attachments_for(conn, "reply", row["id"]),
+        "like_count": like_count,
+        "dislike_count": dislike_count,
+        "my_reaction": my_reaction(conn, "explore_reply", row["id"], user),
     }
     d.update(_identity(row))
     return d
@@ -409,3 +413,26 @@ async def create_reply(
         conn.commit()
         row = conn.execute(REPLY_SELECT + " WHERE explore_replies.id = ?", (reply_id,)).fetchone()
         return _reply_to_dict(conn, row, user, post["user_id"])
+
+
+@router.post("/explore/replies/{reply_id}/react")
+def react_to_reply(
+    reply_id: int,
+    reaction: str = Form(...),
+    user: dict = Depends(require_user),
+):
+    """Thumbs up/down on a discussion reply — same rules as reacting to a
+    post (one switchable reaction per user, toggles off on repeat click,
+    can't react to your own reply)."""
+    if reaction not in {"like", "dislike"}:
+        raise HTTPException(400, "reaction must be 'like' or 'dislike'")
+    with get_conn() as conn:
+        reply = conn.execute("SELECT * FROM explore_replies WHERE id = ?", (reply_id,)).fetchone()
+        if not reply:
+            raise HTTPException(404, "Not found")
+        if reply["user_id"] == user["id"]:
+            raise HTTPException(400, "You can't react to your own reply")
+        result = toggle_reaction(conn, "explore_reply", reply_id, user["id"], reaction)
+        conn.commit()
+        likes, dislikes = reaction_counts(conn, "explore_reply", reply_id)
+    return {"my_reaction": result, "like_count": likes, "dislike_count": dislikes}

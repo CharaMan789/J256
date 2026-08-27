@@ -311,15 +311,18 @@ def init_db():
             )
         """)
 
-        # --- Reactions: thumbs up/down on a post. One reaction per user
-        # per post (switching from like to dislike replaces the row);
-        # voting again with the same reaction removes it. The poster
-        # reacting on their own post is blocked in the route handlers.
-        # Covers explore posts and newspaper articles via post_kind, same
-        # convention as reports below.
+        # --- Reactions: thumbs up/down on a post OR a discussion reply.
+        # One reaction per user per (post_kind, post_id) — switching from
+        # like to dislike replaces the row; voting again with the same
+        # reaction removes it. The poster reacting on their own
+        # post/reply is blocked in the route handlers. post_kind
+        # disambiguates the id namespace: 'explore' and 'article' are
+        # posts, 'explore_reply' is a reply on a discussion post — an
+        # explore_posts.id and an explore_replies.id can collide as bare
+        # integers, so post_kind is what keeps them apart.
         conn.execute("""
             CREATE TABLE IF NOT EXISTS reactions (
-                post_kind TEXT NOT NULL CHECK (post_kind IN ('explore', 'article')),
+                post_kind TEXT NOT NULL CHECK (post_kind IN ('explore', 'article', 'explore_reply')),
                 post_id INTEGER NOT NULL,
                 user_id INTEGER NOT NULL,
                 reaction TEXT NOT NULL CHECK (reaction IN ('like', 'dislike')),
@@ -328,6 +331,19 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         """)
+        # Postgres won't widen an inline CHECK constraint via ALTER TABLE
+        # ADD COLUMN the way SQLite migrations elsewhere in this file work
+        # — the table above may already exist on Render with the old,
+        # narrower constraint (no 'explore_reply'), so it's dropped and
+        # recreated here. Uses Postgres's default auto-generated name for
+        # an inline column CHECK ({table}_{column}_check); safe to run
+        # every startup since DROP ... IF EXISTS is a no-op once this has
+        # already applied once.
+        conn.execute("ALTER TABLE reactions DROP CONSTRAINT IF EXISTS reactions_post_kind_check")
+        conn.execute(
+            "ALTER TABLE reactions ADD CONSTRAINT reactions_post_kind_check "
+            "CHECK (post_kind IN ('explore', 'article', 'explore_reply'))"
+        )
 
         # --- Reporting: any signed-in user can report a post; moderators
         # review reported posts and either cancel the report or warn the

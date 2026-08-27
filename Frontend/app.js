@@ -204,6 +204,7 @@ function render() {
   else if (currentView === "explore-detail") renderExploreDetail();
   else if (currentView === "explore-compose") renderExploreCompose();
   else if (currentView === "magazine") renderMagazine();
+  else if (currentView === "article-detail") renderArticleDetail(articleDetailId);
   else if (currentView === "drafts") renderDrafts();
   else if (currentView === "reported") renderReported();
   else if (currentView === "ban-polls") renderBanPolls();
@@ -269,6 +270,14 @@ let explorePosts = [];
 let exploreDetailId = null;
 let exploreComposeType = null; // 'poll' | 'discussion' | 'announcement'
 let exploreComposeFiles = [];
+let articleDetailId = null;
+
+function openArticleDetail(id) {
+  articleDetailId = id;
+  currentView = "article-detail";
+  setActiveNav("magazine");
+  render();
+}
 
 function goToExploreFeed() {
   currentView = "explore";
@@ -361,7 +370,7 @@ function wireExploreFeed() {
 }
 
 function postTypeBadge(type) {
-  const map = { poll: "Poll", discussion: "Discussion", announcement: "Announcement" };
+  const map = { poll: "Poll", discussion: "Discussion", announcement: "Announcement", article: "Article" };
   return `<span class="post-type-badge post-type-badge-${type}">${map[type]}</span>`;
 }
 
@@ -376,11 +385,11 @@ function opBadgeHtml(isOp) {
 
 function attachmentsRow(atts) {
   if (!atts || atts.length === 0) return "";
-  return `<div class="post-card-attachments">${atts.map(a =>
-    a.kind === "video"
-      ? `<video src="${API}${a.url}" controls></video>`
-      : `<img src="${API}${a.url}" alt="">`
-  ).join("")}</div>`;
+  return `<div class="post-card-attachments">${atts.map(a => {
+    if (a.kind === "video") return `<video src="${API}${a.url}" controls></video>`;
+    if (a.kind === "file") return `<div class="doc-attachment-file">${ICONS.file} <a href="${API}${a.url}" target="_blank">${escapeHtml(a.original_name)}</a></div>`;
+    return `<img src="${API}${a.url}" alt="">`;
+  }).join("")}</div>`;
 }
 
 function explorePostCard(p) {
@@ -433,6 +442,22 @@ function announcementCard(p) {
       <p class="post-card-body">${renderFormattedBody(p.body)}</p>
       ${attachmentsRow(p.attachments)}
       <div class="post-card-footer">${reactionButtonsHtml("explore", p)}${reportButtonHtml("explore", p.id)}</div>
+    </div>
+  `;
+}
+
+// E-Magazine article, shown in the feed exactly like an Explore post —
+// full text, photos/videos inline — rather than only being reachable
+// through the compiled PDF. Clicking it opens the same article detail
+// page the "Download the PDF" flow always had, just now actually linked to.
+function articleCard(a) {
+  return `
+    <div class="post-card post-card-clickable" data-type="article" data-id="${a.id}">
+      <div class="post-card-meta">${postTypeBadge("article")} ${escapeHtml(a.author)}${a.is_anonymous ? " (anon)" : ""} · ${timeAgo(a.published_at)}</div>
+      <h3 class="post-card-title">${escapeHtml(a.title)}</h3>
+      <p class="post-card-body">${renderFormattedBody(a.body)}</p>
+      ${attachmentsRow(a.attachments)}
+      <div class="post-card-footer">${reactionButtonsHtml("article", a)}${reportButtonHtml("article", a.id)}</div>
     </div>
   `;
 }
@@ -495,7 +520,7 @@ async function renderExploreDetail() {
                   <input type="checkbox" id="replyAnonCheckbox">
                   <span class="switch-track"></span>
                 </label>
-                <span>Reply as <strong id="replyAnonName">${escapeHtml(currentUser ? currentUser.name : "")}</strong></span>
+                <span>Anonymous</span>
               </div>
               <button class="submit-btn" id="sendReplyBtn">Reply</button>
             </div>
@@ -519,6 +544,7 @@ function replyItem(r) {
       <div class="post-card-meta">${escapeHtml(r.author)}${r.is_anonymous ? " (anon)" : ""}${opBadgeHtml(r.is_op)} · ${timeAgo(r.created_at)}</div>
       <p class="reply-body">${renderFormattedBody(r.body)}</p>
       ${attachmentsRow(r.attachments)}
+      <div class="post-card-footer">${reactionButtonsHtml("explore_reply", r)}</div>
     </div>
   `;
 }
@@ -553,11 +579,6 @@ function wireReplyComposer(post) {
       fileInput.value = "";
       preview.innerHTML = "";
     });
-  });
-
-  document.getElementById("replyAnonCheckbox").addEventListener("change", (e) => {
-    if (!currentUser) return;
-    document.getElementById("replyAnonName").textContent = e.target.checked ? currentUser.pseudonym : currentUser.name;
   });
 
   document.getElementById("sendReplyBtn").addEventListener("click", async () => {
@@ -691,7 +712,7 @@ function renderExploreCompose() {
                 <input type="checkbox" id="anonCheckbox">
                 <span class="switch-track"></span>
               </label>
-              <span>Post as <strong id="anonLabelName">${escapeHtml(currentUser.name)}</strong></span>
+              <span>Anonymous</span>
             </div>
           </div>
         </div>
@@ -706,9 +727,6 @@ function renderExploreCompose() {
   `;
 
   document.getElementById("composeCancel").addEventListener("click", cancelExploreCompose);
-  document.getElementById("anonCheckbox").addEventListener("change", (e) => {
-    document.getElementById("anonLabelName").textContent = e.target.checked ? currentUser.pseudonym : currentUser.name;
-  });
 
   if (type === "poll") {
     autoGrow(document.getElementById("pollQuestion"));
@@ -822,17 +840,31 @@ async function renderMagazine() {
             ${ICONS.pdf} View Magazine
           </a>
         </div>
-        ${count === 0
-          ? `<div class="empty-state">No articles yet. Once someone submits one, the compiled magazine will appear here.</div>`
-          : `<div class="magazine-download-row">
+        ${count > 0
+          ? `<div class="magazine-download-row">
                <a href="${API}/magazine.pdf?download=1" download="J256-magazine.pdf">Download the PDF ↓</a>
-             </div>`}
+             </div>`
+          : ""}
+        <div class="explore-feed" id="magazineFeed">
+          ${count === 0
+            ? `<div class="empty-state">No articles yet. Once someone submits one, it'll show up here — as well as in the compiled PDF above.</div>`
+            : articles.map(articleCard).join("")}
+        </div>
       </div>
     `;
     document.getElementById("newArticleBtn").addEventListener("click", startNewArticle);
+    wireMagazineFeed();
   } catch (e) {
     appEl.innerHTML = `<div class="page-wrap"><p class="empty-state">Couldn't load the newspaper.<br>${escapeHtml(e.message)}</p></div>`;
   }
+}
+
+function wireMagazineFeed() {
+  document.querySelectorAll("#magazineFeed .post-card-clickable").forEach(card => {
+    card.addEventListener("click", () => openArticleDetail(card.dataset.id));
+  });
+  wireReportButtons();
+  wireReactionButtons();
 }
 
 async function renderArticleDetail(id) {
@@ -979,7 +1011,7 @@ function renderCompose() {
                 <input type="checkbox" id="anonCheckbox" ${d.is_anonymous ? "checked" : ""}>
                 <span class="switch-track"></span>
               </label>
-              <span>Publish as <strong id="anonLabelName">${d.is_anonymous ? escapeHtml(currentUser.pseudonym) : escapeHtml(currentUser.name)}</strong></span>
+              <span>Anonymous</span>
             </div>
           </div>
         </div>
@@ -1010,7 +1042,6 @@ function renderCompose() {
     updateLivePreview("articleLivePreview", e.target.value);
   });
   document.getElementById("anonCheckbox").addEventListener("change", (e) => {
-    document.getElementById("anonLabelName").textContent = e.target.checked ? currentUser.pseudonym : currentUser.name;
     composeDirty = true;
     markUnsaved();
   });
@@ -1471,6 +1502,8 @@ async function handleReactionClick(btn) {
   try {
     const endpoint = postKind === "article"
       ? `${API}/posts/${postId}/react`
+      : postKind === "explore_reply"
+      ? `${API}/explore/replies/${postId}/react`
       : `${API}/explore/${postId}/react`;
     const result = await fetchJSON(endpoint, {
       method: "POST",

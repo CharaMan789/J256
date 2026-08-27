@@ -727,6 +727,11 @@ select:focus-visible {
   background: var(--accent-pale);
 }
 
+.post-type-badge-article {
+  color: var(--gold);
+  background: var(--gold-pale);
+}
+
 .post-card-title {
   max-width: 830px;
   font-family: var(--display-font);
