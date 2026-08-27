@@ -12,7 +12,12 @@ from reactions import reaction_counts, my_reaction, toggle_reaction
 router = APIRouter()
 
 BASE_DIR = Path(__file__).parent
-UPLOAD_DIR = BASE_DIR.parent / "frontend" / "uploads"
+# Capital "Frontend" — must match the exact folder name in the repo (see
+# the same fix already applied in main.py). Render's Linux filesystem is
+# case-sensitive, so a lowercase mismatch here silently points at a
+# folder that doesn't exist — every image/video attachment save then
+# fails, and any discussion/announcement/reply with a file 500s.
+UPLOAD_DIR = BASE_DIR.parent / "Frontend" / "uploads"
 
 VALID_TYPES = {"poll", "discussion", "announcement"}
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm", ".mkv", ".avi"}

@@ -7,3 +7,4 @@ itsdangerous
 python-dotenv
 reportlab
 pillow
+psycopg2-binary

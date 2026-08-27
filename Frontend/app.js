@@ -180,24 +180,11 @@ function checkLoginError() {
   if (!error) return;
   let msg = "Something went wrong signing in.";
   if (error === "login_failed") msg = "Sign-in didn't go through. Try again.";
-  if (error === "not_logged_in") msg = "Sign in first before verifying your IISER account.";
-  if (error === "iiser_domain_mismatch") msg = `That wasn't an @${ALLOWED_DOMAIN} account. Pick your IISER Google account.`;
-  if (error === "iiser_already_linked") msg = "That IISER account is already linked to a different account.";
-  if (error === "iiser_verify_failed") msg = "IISER verification didn't go through. Try again.";
+  if (error === "iiser_domain_mismatch") msg = `Sign in with your @${ALLOWED_DOMAIN} Google account.`;
   const banner = document.createElement("div");
   banner.className = "error-msg";
   banner.style.cssText = "text-align:center; padding:12px; background:var(--red-pale); color:var(--red); margin: 12px 32px 0; border-radius:10px; font-weight:500;";
   banner.textContent = msg;
-  document.body.insertBefore(banner, document.querySelector(".shell"));
-}
-
-function checkVerifySuccess() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("iiser") !== "verified") return;
-  const banner = document.createElement("div");
-  banner.className = "success-msg";
-  banner.style.cssText = "text-align:center; padding:12px; background:var(--green-pale); color:var(--green); margin: 12px 32px 0; border-radius:10px; font-weight:500;";
-  banner.textContent = "IISER account verified.";
   document.body.insertBefore(banner, document.querySelector(".shell"));
 }
 
@@ -230,7 +217,6 @@ function goToAccount() {
 }
 
 function renderAccount() {
-  const iiserEmail = currentUser ? currentUser.iiser_email : null;
   appEl.innerHTML = `
     <div class="page-wrap">
       <div class="page-header">
@@ -238,25 +224,12 @@ function renderAccount() {
         <h1 class="page-title">My account</h1>
       </div>
       <div class="account-section">
-        <p class="account-label">IISER identity</p>
-        ${iiserEmail
-          ? `<p class="account-value">Verified — ${escapeHtml(iiserEmail)}</p>`
-          : `
-            <p class="account-value" style="color: var(--muted); margin-bottom: 12px;">
-              Not verified yet. Sign in again with your @${ALLOWED_DOMAIN} Google account to link it here.
-            </p>
-            <button class="signin-btn" id="verifyIiserBtn" style="width:auto; padding:11px 22px;">Verify with IISER Google account</button>
-          `
-        }
+        <p class="account-label">Signed in as</p>
+        <p class="account-value">${escapeHtml(currentUser.email)}</p>
       </div>
       <button class="signin-btn" id="accountSignOutBtn" style="width:auto; padding:11px 22px; margin-top:24px;">Sign out</button>
     </div>
   `;
-  if (!iiserEmail) {
-    document.getElementById("verifyIiserBtn").addEventListener("click", () => {
-      window.location.href = `${API}/auth/verify-iiser`;
-    });
-  }
   document.getElementById("accountSignOutBtn").addEventListener("click", () => {
     window.location.href = `${API}/auth/logout`;
   });
@@ -1537,7 +1510,6 @@ if (new URLSearchParams(window.location.search).get("view") === "account") {
   currentView = "account";
 }
 checkLoginError();
-checkVerifySuccess();
 loadCurrentUser();
 setActiveNav(currentView);
 render();
