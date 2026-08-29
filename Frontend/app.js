@@ -254,8 +254,8 @@ function renderHome() {
         </div>
         <div class="dashboard-card" id="goMagazineCard">
           <div class="dashboard-card-icon">${ICONS.newspaper}</div>
-          <h3 class="dashboard-card-title">E-Magazine</h3>
-          <p class="dashboard-card-desc">Read the newspaper, or write and submit your own article.</p>
+          <h3 class="dashboard-card-title">E-Magazine <span class="nav-badge">Soon</span></h3>
+          <p class="dashboard-card-desc">Under development — check back soon.</p>
         </div>
       </div>
     </div>
@@ -386,10 +386,10 @@ function opBadgeHtml(isOp) {
 function attachmentsRow(atts) {
   if (!atts || atts.length === 0) return "";
   return `<div class="post-card-attachments">${atts.map(a => {
-    if (a.kind === "video") return `<video src="${a.url}" controls></video>`;
-    if (a.kind === "audio") return `<audio src="${a.url}" controls></audio>`;
-    if (a.kind === "file") return `<div class="doc-attachment-file">${ICONS.file} <a href="${a.url}" target="_blank">${escapeHtml(a.original_name)}</a></div>`;
-    return `<img src="${a.url}" alt="">`;
+    if (a.kind === "video") return `<video src="${API}${a.url}" controls></video>`;
+    if (a.kind === "audio") return `<audio src="${API}${a.url}" controls></audio>`;
+    if (a.kind === "file") return `<div class="doc-attachment-file">${ICONS.file} <a href="${API}${a.url}" target="_blank">${escapeHtml(a.original_name)}</a></div>`;
+    return `<img src="${API}${a.url}" alt="">`;
   }).join("")}</div>`;
 }
 
@@ -549,6 +549,7 @@ function replyItem(r, depth) {
       <div class="post-card-footer">
         ${reactionButtonsHtml("explore_reply", r)}
         <button class="reply-to-reply-btn" data-reply-id="${r.id}" data-reply-author="${escapeHtml(r.author)}">Reply</button>
+        ${reportButtonHtml("explore_reply", r.id)}
       </div>
     </div>
     ${children}
@@ -862,46 +863,25 @@ function cancelExploreCompose() {
 }
 
 // ---------- magazine ----------
-
+// Temporarily closed to the public while this feature is under
+// development. Deliberately short-circuits before any network call or
+// compose/detail flow — nobody can reach an article, submit one, or
+// trigger the PDF from here while this is in place, regardless of how
+// they got to this view (nav click, the Home dashboard card, or a
+// stale link/bookmark to ?view=magazine).
 async function renderMagazine() {
-  appEl.innerHTML = `<div class="page-wrap"><p class="empty-state">Loading the newspaper…</p></div>`;
-  try {
-    const articles = await fetchJSON(`${API}/posts/newspaper`);
-    const count = articles.length;
-    const latest = count > 0 ? articles[0].published_at : null;
-
-    appEl.innerHTML = `
-      <div class="page-wrap">
-        <div class="page-header">
-          <p class="page-eyebrow">E-Magazine</p>
-          <h1 class="page-title">The Newspaper</h1>
-          ${count > 0 ? `<p class="page-subtitle">${count} article${count === 1 ? "" : "s"} · updated ${timeAgo(latest)}</p>` : ""}
-        </div>
-        <div class="magazine-actions-row">
-          <button class="new-article-cta" id="newArticleBtn">${ICONS.plus} Post New Article</button>
-          <a class="view-magazine-btn ${count === 0 ? "disabled" : ""}"
-             ${count === 0 ? "" : `href="${API}/magazine.pdf" target="_blank" rel="noopener"`}
-             title="${count === 0 ? "No articles published yet" : "Open the compiled magazine PDF"}">
-            ${ICONS.pdf} View Magazine
-          </a>
-        </div>
-        ${count > 0
-          ? `<div class="magazine-download-row">
-               <a href="${API}/magazine.pdf?download=1" download="J256-magazine.pdf">Download the PDF ↓</a>
-             </div>`
-          : ""}
-        <div class="explore-feed" id="magazineFeed">
-          ${count === 0
-            ? `<div class="empty-state">No articles yet. Once someone submits one, it'll show up here — as well as in the compiled PDF above.</div>`
-            : articles.map(articleCard).join("")}
-        </div>
+  appEl.innerHTML = `
+    <div class="page-wrap">
+      <div class="page-header">
+        <p class="page-eyebrow">E-Magazine</p>
+        <h1 class="page-title">The Newspaper</h1>
       </div>
-    `;
-    document.getElementById("newArticleBtn").addEventListener("click", startNewArticle);
-    wireMagazineFeed();
-  } catch (e) {
-    appEl.innerHTML = `<div class="page-wrap"><p class="empty-state">Couldn't load the newspaper.<br>${escapeHtml(e.message)}</p></div>`;
-  }
+      <div class="empty-state" style="padding:48px 24px; text-align:center;">
+        <p style="font-size:16px; font-weight:600; margin-bottom:6px;">This feature is currently under development.</p>
+        <p style="color:var(--muted);">The E-Magazine is being rebuilt — check back soon.</p>
+      </div>
+    </div>
+  `;
 }
 
 function wireMagazineFeed() {
@@ -917,10 +897,10 @@ async function renderArticleDetail(id) {
   try {
     const a = await fetchJSON(`${API}/posts/${id}`);
     const media = a.attachments.map(att => {
-      if (att.kind === "image") return `<img src="${att.url}" alt="">`;
-      if (att.kind === "video") return `<video src="${att.url}" controls></video>`;
-      if (att.kind === "audio") return `<audio src="${att.url}" controls></audio>`;
-      return `<div class="doc-attachment-file">${ICONS.file} <a href="${att.url}" target="_blank">${escapeHtml(att.original_name)}</a></div>`;
+      if (att.kind === "image") return `<img src="${API}${att.url}" alt="">`;
+      if (att.kind === "video") return `<video src="${API}${att.url}" controls></video>`;
+      if (att.kind === "audio") return `<audio src="${API}${att.url}" controls></audio>`;
+      return `<div class="doc-attachment-file">${ICONS.file} <a href="${API}${att.url}" target="_blank">${escapeHtml(att.original_name)}</a></div>`;
     }).join("");
     appEl.innerHTML = `
       <div class="page-wrap">
@@ -959,41 +939,21 @@ function draftRow(d) {
 }
 
 async function renderDrafts() {
-  if (!requireLogin()) return;
-  appEl.innerHTML = `<div class="page-wrap"><p class="empty-state">Loading your drafts…</p></div>`;
-  try {
-    const drafts = await fetchJSON(`${API}/posts/drafts`);
-    appEl.innerHTML = `
-      <div class="page-wrap">
-        <div class="page-header">
-          <p class="page-eyebrow">E-Magazine</p>
-          <h1 class="page-title">Saved Drafts</h1>
-          <p class="page-subtitle">Pick up where you left off.</p>
-        </div>
-        ${drafts.length === 0
-          ? `<div class="empty-state">No drafts saved. Start an article from E-Magazine and save it as a draft anytime.</div>`
-          : drafts.map(draftRow).join("")}
+  // Saved Drafts holds E-Magazine article drafts specifically — closed
+  // down alongside the rest of that feature (see renderMagazine above)
+  // rather than left as a working side-door into the compose editor.
+  appEl.innerHTML = `
+    <div class="page-wrap">
+      <div class="page-header">
+        <p class="page-eyebrow">E-Magazine</p>
+        <h1 class="page-title">Saved Drafts</h1>
       </div>
-    `;
-    document.querySelectorAll(".draft-row-main, .draft-meta").forEach(el => {
-      el.closest(".draft-row").addEventListener("click", (e) => {
-        if (e.target.classList.contains("draft-delete")) return;
-        openCompose(el.closest(".draft-row").dataset.id);
-      });
-    });
-    document.querySelectorAll(".draft-delete").forEach(btn => {
-      btn.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        if (!confirm("Delete this draft? This can't be undone.")) return;
-        try {
-          await fetchJSON(`${API}/posts/${btn.dataset.id}`, { method: "DELETE" });
-          renderDrafts();
-        } catch (err) { alert(err.message); }
-      });
-    });
-  } catch (e) {
-    appEl.innerHTML = `<div class="page-wrap"><p class="empty-state">Couldn't load your drafts.<br>${escapeHtml(e.message)}</p></div>`;
-  }
+      <div class="empty-state" style="padding:48px 24px; text-align:center;">
+        <p style="font-size:16px; font-weight:600; margin-bottom:6px;">This feature is currently under development.</p>
+        <p style="color:var(--muted);">The E-Magazine is being rebuilt — check back soon.</p>
+      </div>
+    </div>
+  `;
 }
 
 // ---------- compose (document-style editor, E-Magazine articles) ----------
@@ -1134,9 +1094,9 @@ function renderAttachmentsList() {
   if (!container) return;
   container.innerHTML = composeDraft.attachments.map(att => {
     let inner;
-    if (att.kind === "image") inner = `<img src="${att.url}" alt="">`;
-    else if (att.kind === "video") inner = `<video src="${att.url}" controls></video>`;
-    else if (att.kind === "audio") inner = `<audio src="${att.url}" controls></audio>`;
+    if (att.kind === "image") inner = `<img src="${API}${att.url}" alt="">`;
+    else if (att.kind === "video") inner = `<video src="${API}${att.url}" controls></video>`;
+    else if (att.kind === "audio") inner = `<audio src="${API}${att.url}" controls></audio>`;
     else inner = `<div class="doc-attachment-file">${ICONS.file} ${escapeHtml(att.original_name)}</div>`;
     return `
       <div class="doc-attachment" data-id="${att.id}">
@@ -1270,11 +1230,11 @@ async function renderReported() {
 }
 
 function reportedItem(r) {
-  const canBanPoll = r.post_exists && r.post_is_anonymous;
+  const canBanPoll = r.post_exists && r.post_is_anonymous && r.post_kind !== "explore_reply";
   return `
     <div class="mod-item" data-report-id="${r.id}" data-post-kind="${r.post_kind}" data-post-id="${r.post_id}">
       <div class="mod-item-meta">${escapeHtml(r.post_type)} · reported by ${escapeHtml(r.reported_by_name)} · ${timeAgo(r.created_at)}</div>
-      <h3 class="mod-item-title">${escapeHtml(r.post_title || "(untitled)")}</h3>
+      ${r.post_type === "reply" ? "" : `<h3 class="mod-item-title">${escapeHtml(r.post_title || "(untitled)")}</h3>`}
       <p class="mod-item-body">${escapeHtml(plainPreview(r.post_body || "", 300))}</p>
       <div class="mod-actions-row">
         <button class="mod-btn mod-btn-dismiss" data-action="cancel">Cancel report</button>

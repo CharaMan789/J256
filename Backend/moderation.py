@@ -50,6 +50,15 @@ def _post_and_author(conn, post_kind, post_id):
             "JOIN users ON explore_posts.user_id = users.id WHERE explore_posts.id = ?",
             (post_id,),
         ).fetchone()
+    elif post_kind == "explore_reply":
+        # Covers both a reply to a post and a reply to another reply —
+        # both are just rows in explore_replies (see parent_reply_id in
+        # database.py), so this one branch handles both.
+        row = conn.execute(
+            "SELECT explore_replies.*, users.email AS author_email FROM explore_replies "
+            "JOIN users ON explore_replies.user_id = users.id WHERE explore_replies.id = ?",
+            (post_id,),
+        ).fetchone()
     else:
         row = conn.execute(
             "SELECT posts.*, users.email AS author_email FROM posts "
@@ -97,8 +106,8 @@ def create_report(
     post_id: int = Form(...),
     user: dict = Depends(require_user),
 ):
-    if post_kind not in {"explore", "article"}:
-        raise HTTPException(400, "post_kind must be 'explore' or 'article'")
+    if post_kind not in {"explore", "article", "explore_reply"}:
+        raise HTTPException(400, "post_kind must be 'explore', 'article', or 'explore_reply'")
     with get_conn() as conn:
         post = _post_and_author(conn, post_kind, post_id)
         if not post:
@@ -131,16 +140,22 @@ def list_reported(moderator: dict = Depends(require_moderator)):
         for r in rows:
             post = _post_and_author(conn, r["post_kind"], r["post_id"])
             item = dict(r)
+            is_reply = r["post_kind"] == "explore_reply"
             if post:
-                item["post_title"] = post["title"]
-                item["post_body"] = post["body"]
-                item["post_type"] = post["type"] if r["post_kind"] == "explore" else "article"
+                post_d = dict(post)
+                # explore_replies has no title column (only body) — a
+                # reply's "title" in the queue is just blank, so the
+                # moderator UI falls back to showing the body as the
+                # whole preview.
+                item["post_title"] = post_d.get("title") or ""
+                item["post_body"] = post_d.get("body", "")
+                item["post_type"] = "reply" if is_reply else (post_d.get("type") if r["post_kind"] == "explore" else "article")
                 item["post_exists"] = True
-                item["post_is_anonymous"] = bool(post["is_anonymous"])
+                item["post_is_anonymous"] = bool(post_d.get("is_anonymous"))
             else:
-                item["post_title"] = "(post deleted)"
+                item["post_title"] = "(reply deleted)" if is_reply else "(post deleted)"
                 item["post_body"] = ""
-                item["post_type"] = r["post_kind"]
+                item["post_type"] = "reply" if is_reply else r["post_kind"]
                 item["post_exists"] = False
                 item["post_is_anonymous"] = False
             result.append(item)

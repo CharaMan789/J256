@@ -365,16 +365,18 @@ def init_db():
             "CHECK (post_kind IN ('explore', 'article', 'explore_reply'))"
         )
 
-        # --- Reporting: any signed-in user can report a post; moderators
-        # review reported posts and either cancel the report or warn the
+        # --- Reporting: any signed-in user can report a post OR a
+        # discussion reply (including a reply to a reply — both are just
+        # rows in explore_replies, so post_kind='explore_reply' covers
+        # both uniformly, same convention as reactions above). Moderators
+        # review reported items and either cancel the report or warn the
         # author (an emailed message — the moderator never sees the
         # recipient's address; see moderation.py). One report per user
-        # per post. Covers explore posts (poll/discussion/announcement)
-        # and newspaper articles via post_kind.
+        # per item.
         conn.execute("""
             CREATE TABLE IF NOT EXISTS reports (
                 id SERIAL PRIMARY KEY,
-                post_kind TEXT NOT NULL CHECK (post_kind IN ('explore', 'article')),
+                post_kind TEXT NOT NULL CHECK (post_kind IN ('explore', 'article', 'explore_reply')),
                 post_id INTEGER NOT NULL,
                 reported_by_user_id INTEGER NOT NULL,
                 created_at TEXT NOT NULL DEFAULT (NOW()),
@@ -383,6 +385,14 @@ def init_db():
                 FOREIGN KEY (reported_by_user_id) REFERENCES users(id)
             )
         """)
+        # Same Postgres CHECK-widening pattern as above — this table may
+        # already exist on Render with the old, narrower constraint (no
+        # 'explore_reply'). No-op once already applied.
+        conn.execute("ALTER TABLE reports DROP CONSTRAINT IF EXISTS reports_post_kind_check")
+        conn.execute(
+            "ALTER TABLE reports ADD CONSTRAINT reports_post_kind_check "
+            "CHECK (post_kind IN ('explore', 'article', 'explore_reply'))"
+        )
         # Warnings sent to a post's author. The moderator writes the
         # reason; the email is "sent" to the author's address, but the
         # moderator is never shown who the recipient is.

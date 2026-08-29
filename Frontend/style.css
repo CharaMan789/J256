@@ -297,7 +297,24 @@ select:focus-visible {
   flex-shrink: 0;
 }
 
+.nav-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  color: var(--accent-dark);
+  background: var(--accent-pale);
+  padding: 2px 6px;
+  border-radius: 999px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .sidebar.collapsed .nav-label {
+  display: none;
+}
+
+.sidebar.collapsed .nav-badge {
   display: none;
 }
 
