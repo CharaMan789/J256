@@ -1778,7 +1778,7 @@ function onboardingFeaturesStep() {
 
   return `
     <div class="onboarding-step">
-      <p class="onboarding-eyebrow">Step 2 of 3</p>
+      <p class="onboarding-eyebrow">Step 2 of 4</p>
       <h2 class="onboarding-heading">Things you need to know</h2>
       <div class="onboarding-features">${features}</div>
 
@@ -1810,20 +1810,43 @@ function onboardingGuidelinesStep() {
 
   return `
     <div class="onboarding-step">
-      <p class="onboarding-eyebrow">Step 3 of 3</p>
+      <p class="onboarding-eyebrow">Step 3 of 4</p>
       <h2 class="onboarding-heading">Community Guidelines</h2>
+      <p class="onboarding-sub" style="margin-bottom:20px;">Please read through before continuing.</p>
+      <ol class="onboarding-guidelines">${items}</ol>
+    </div>
+  `;
+}
+
+const ONBOARDING_GUIDELINES_2 = [
+  "Harm to any real person, idea, belief, or an intention to harm said categories will be taken seriously.",
+  "Anything illegal is strictly illegal.",
+  "Distressing or taboo content is not encouraged, unless shared from an autobiographical perspective — even then, it is generally discouraged.",
+  "Spread of hate against any party (a person, a group of people, an idea, anything) is prohibited.",
+  "Attempts to influence others ideologically, personally, or by any other means are prohibited.",
+];
+
+function onboardingGuidelinesStep2() {
+  const items = ONBOARDING_GUIDELINES_2.map((g, i) => `
+    <li><span class="onboarding-guideline-num">${i + 1}</span><span>${escapeHtml(g)}</span></li>
+  `).join("");
+
+  return `
+    <div class="onboarding-step">
+      <p class="onboarding-eyebrow">Step 4 of 4</p>
+      <h2 class="onboarding-heading">A few more guidelines</h2>
       <p class="onboarding-sub" style="margin-bottom:20px;">Please read through before continuing.</p>
       <ol class="onboarding-guidelines">${items}</ol>
 
       <label class="onboarding-agree-row">
         <input type="checkbox" id="onboardingAgreeCheckbox">
-        <span>I have read and agree to the Community Guidelines and Terms of Use.</span>
+        <span>I choose to accept the rules.</span>
       </label>
     </div>
   `;
 }
 
-const ONBOARDING_STEPS = [onboardingWelcomeStep, onboardingFeaturesStep, onboardingGuidelinesStep];
+const ONBOARDING_STEPS = [onboardingWelcomeStep, onboardingFeaturesStep, onboardingGuidelinesStep, onboardingGuidelinesStep2];
 let onboardingStepIndex = 0;
 
 function maybeShowOnboarding() {
@@ -1872,7 +1895,7 @@ function renderOnboardingOverlay() {
           ${isFirst ? "" : "← Previous"}
         </button>
         <button type="button" class="onboarding-btn onboarding-btn-primary" id="onboardingNextBtn" ${isLast ? "disabled" : ""}>
-          ${isLast ? "Agree & Continue" : "Next →"}
+          ${isLast ? "I choose to accept the rules" : "Next →"}
         </button>
       </div>
     </div>
@@ -1913,7 +1936,7 @@ async function acceptOnboarding() {
   } catch (e) {
     alert(e.message);
     nextBtn.disabled = false;
-    nextBtn.textContent = "Agree & Continue";
+    nextBtn.textContent = "I choose to accept the rules";
   }
 }
 
