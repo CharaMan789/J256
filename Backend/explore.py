@@ -13,8 +13,8 @@ router = APIRouter()
 
 VALID_TYPES = {"poll", "discussion", "announcement"}
 # Classic forum-style pagination (like an imageboard) instead of infinite
-# scroll — 25 posts per page, page numbers at the bottom of the feed.
-EXPLORE_PAGE_SIZE = 25
+# scroll — 7 posts per page, page numbers at the bottom of the feed.
+EXPLORE_PAGE_SIZE = 7
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm", ".mkv", ".avi"}
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac"}
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".heic", ".heif"}
@@ -294,7 +294,7 @@ def list_explore(
     user: dict | None = Depends(get_current_user),
 ):
     """Paginated like an old-school forum/imageboard rather than infinite
-    scroll: a fixed EXPLORE_PAGE_SIZE (25) posts per page, newest first,
+    scroll: a fixed EXPLORE_PAGE_SIZE (7) posts per page, newest first,
     with page numbers at the bottom instead of auto-loading more on
     scroll. Returns the page of posts alongside the pagination metadata
     the frontend needs to render page links (total, total_pages)."""
