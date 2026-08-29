@@ -44,6 +44,7 @@ const ICONS = {
   image: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><circle cx="6.5" cy="7" r="1.3" stroke="currentColor" stroke-width="1.2"/><path d="M3 13l4-4 3 3 2.5-2.5L15 13" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>`,
   video: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4.5" width="9.5" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M11.5 7.5L16 5v8l-4.5-2.5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
   file: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6 2h4.5L14 5.5V15a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M10.5 2v3.5H14" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
+  audio: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6.5 12V4.5l7-1.8v7.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="4.8" cy="12" r="1.8" stroke="currentColor" stroke-width="1.4"/><circle cx="11.8" cy="10.2" r="1.8" stroke="currentColor" stroke-width="1.4"/></svg>`,
   pdf: `<svg width="26" height="26" viewBox="0 0 26 26" fill="none"><path d="M6 2.5h9l5 5V22a1.3 1.3 0 01-1.3 1.3H6A1.3 1.3 0 014.7 22V3.8A1.3 1.3 0 016 2.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M15 2.5V8h5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><text x="13" y="17.5" font-family="IBM Plex Mono, monospace" font-size="5.5" font-weight="600" text-anchor="middle" fill="currentColor">PDF</text></svg>`,
   latex: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 13.5L7.5 4.5M7.5 4.5L12 13.5M4.7 10h5.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M12.5 6.5h3M14 6.5v6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
   x: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><line x1="3" y1="3" x2="13" y2="13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="13" y1="3" x2="3" y2="13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
@@ -55,6 +56,9 @@ const ICONS = {
   reply: `<svg width="15" height="15" viewBox="0 0 18 18" fill="none"><path d="M15 9a5.5 5.5 0 01-5.5 5.5H6l-3 2.5v-3.2A5.5 5.5 0 013.5 3.5h6A5.5 5.5 0 0115 9z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>`,
   thumbsUp: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M7 8l3-5.5a1.6 1.6 0 013 1v4h3a1.5 1.5 0 011.4 2.1l-2 5A1.5 1.5 0 0113.9 15.5H7V8z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M7 8v7.5H4.5a1 1 0 01-1-1V9a1 1 0 011-1H7z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>`,
   thumbsDown: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M11 10l-3 5.5a1.6 1.6 0 01-3-1v-4h-3a1.5 1.5 0 01-1.4-2.1l2-5A1.5 1.5 0 014.1 2.5H11V10z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M11 10V2.5h2.5a1 1 0 011 1V9a1 1 0 01-1 1H11z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>`,
+  bell: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M5 7.5a4 4 0 018 0v3l1.3 2.2H3.7L5 10.5v-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M7.3 14.8a1.7 1.7 0 003.4 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+  incognito: `<svg width="20" height="20" viewBox="0 0 18 18" fill="none"><path d="M2.5 11.5c0-3 2.9-6 6.5-6s6.5 3 6.5 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="5.3" cy="12.3" r="1.9" stroke="currentColor" stroke-width="1.3"/><circle cx="12.7" cy="12.3" r="1.9" stroke="currentColor" stroke-width="1.3"/><path d="M7.2 12.3h3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+  shield: `<svg width="20" height="20" viewBox="0 0 18 18" fill="none"><path d="M9 2.2l5.5 2v4.3c0 3.5-2.3 6.3-5.5 7.3-3.2-1-5.5-3.8-5.5-7.3V4.2L9 2.2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M6.3 9l1.9 1.9L11.7 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
 };
 
 // ---------- theme ----------
@@ -134,10 +138,18 @@ async function loadCurrentUser() {
   currentUser = await fetchJSON(`${API}/auth/me`).catch(() => null);
   renderAuthArea();
   if (currentView === "account") render();
+  maybeShowOnboarding();
 }
 
 function renderAuthArea() {
   document.getElementById("reportedNavItem").hidden = !(currentUser && currentUser.is_moderator);
+  document.getElementById("notifBellBtn").hidden = !currentUser;
+  if (currentUser) {
+    loadUnreadCount();
+    startNotifPolling();
+  } else {
+    stopNotifPolling();
+  }
   if (currentUser) {
     const avatar = currentUser.picture
       ? `<img src="${currentUser.picture}" alt="">`
@@ -194,6 +206,84 @@ function requireLogin() {
     return false;
   }
   return true;
+}
+
+// ---------- notifications ----------
+// See notifications.py for why: a notification only ever says "someone
+// replied to one of your discussions/comments" — no title, no preview,
+// no link to the specific post. Nothing here fetches or renders anything
+// beyond that generic text, by design.
+
+let notifPollTimer = null;
+
+async function loadUnreadCount() {
+  if (!currentUser) return;
+  try {
+    const { count } = await fetchJSON(`${API}/notifications/unread-count`);
+    const badge = document.getElementById("notifBadge");
+    if (count > 0) {
+      badge.textContent = count > 9 ? "9+" : String(count);
+      badge.hidden = false;
+    } else {
+      badge.hidden = true;
+    }
+  } catch (e) {
+    // Silent — a failed poll shouldn't interrupt anything else.
+  }
+}
+
+function startNotifPolling() {
+  if (notifPollTimer) return;
+  notifPollTimer = setInterval(loadUnreadCount, 45000);
+}
+
+function stopNotifPolling() {
+  if (notifPollTimer) {
+    clearInterval(notifPollTimer);
+    notifPollTimer = null;
+  }
+}
+
+async function openNotifPanel() {
+  const panel = document.getElementById("notifPanel");
+  panel.hidden = false;
+  const list = document.getElementById("notifPanelList");
+  list.innerHTML = `<p class="empty-state">Loading…</p>`;
+  try {
+    const items = await fetchJSON(`${API}/notifications`);
+    list.innerHTML = items.length === 0
+      ? `<p class="empty-state">No notifications yet.</p>`
+      : items.map(n => `
+          <div class="notif-item ${n.is_read ? "" : "notif-item-unread"}">
+            <p>${escapeHtml(n.text)}</p>
+            <span class="notif-item-time">${timeAgo(n.created_at)}</span>
+          </div>
+        `).join("");
+    // Opening the panel is what "seeing" your notifications means here —
+    // there's nothing further to click into per item, so mark-all-read
+    // happens right away rather than needing a separate button.
+    await fetchJSON(`${API}/notifications/read-all`, { method: "POST" });
+    document.getElementById("notifBadge").hidden = true;
+  } catch (e) {
+    list.innerHTML = `<p class="empty-state">Couldn't load notifications.</p>`;
+  }
+}
+
+function closeNotifPanel() {
+  document.getElementById("notifPanel").hidden = true;
+}
+
+function wireNotifBell() {
+  const bellBtn = document.getElementById("notifBellBtn");
+  const panel = document.getElementById("notifPanel");
+  bellBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (panel.hidden) openNotifPanel();
+    else closeNotifPanel();
+  });
+  document.addEventListener("click", (e) => {
+    if (!panel.hidden && !panel.contains(e.target) && e.target !== bellBtn) closeNotifPanel();
+  });
 }
 
 // ---------- router ----------
@@ -511,9 +601,17 @@ async function renderExploreDetail() {
             ${buildFormatToolbar("reply")}
             <textarea class="reply-input" id="replyInput" placeholder="Write a reply… **bold**, *italic*, $x^2$" rows="2"></textarea>
             <div class="format-live-preview format-live-preview-compact" id="replyLivePreview"></div>
-            <input type="file" id="replyFileInput" accept="image/*" style="display:none">
+            <input type="file" id="replyImageInput" accept="image/*" style="display:none">
+            <input type="file" id="replyVideoInput" accept="video/*" style="display:none">
+            <input type="file" id="replyAudioInput" accept="audio/*" style="display:none">
+            <input type="file" id="replyFileInput" style="display:none">
             <div class="reply-composer-row">
-              <button type="button" class="toolbar-btn" id="replyAttachBtn" title="Add photo">${ICONS.image}</button>
+              <div class="reply-attach-buttons">
+                <button type="button" class="toolbar-btn toolbar-btn-labeled" id="replyAttachImageBtn" title="Add photo">${ICONS.image}<span>Photo</span></button>
+                <button type="button" class="toolbar-btn toolbar-btn-labeled" id="replyAttachVideoBtn" title="Add video">${ICONS.video}<span>Video</span></button>
+                <button type="button" class="toolbar-btn toolbar-btn-labeled" id="replyAttachAudioBtn" title="Add audio">${ICONS.audio}<span>Audio</span></button>
+                <button type="button" class="toolbar-btn toolbar-btn-labeled" id="replyAttachFileBtn" title="Add file">${ICONS.file}<span>File</span></button>
+              </div>
               <div class="anon-toggle">
                 <label class="switch">
                   <input type="checkbox" id="replyAnonCheckbox">
@@ -549,7 +647,6 @@ function replyItem(r, depth) {
       <div class="post-card-footer">
         ${reactionButtonsHtml("explore_reply", r)}
         <button class="reply-to-reply-btn" data-reply-id="${r.id}" data-reply-author="${escapeHtml(r.author)}">Reply</button>
-        ${reportButtonHtml("explore_reply", r.id)}
       </div>
     </div>
     ${children}
@@ -559,6 +656,9 @@ function replyItem(r, depth) {
 function wireReplyComposer(post) {
   let stagedFile = null;
   let replyingToId = null;
+  const imageInput = document.getElementById("replyImageInput");
+  const videoInput = document.getElementById("replyVideoInput");
+  const audioInput = document.getElementById("replyAudioInput");
   const fileInput = document.getElementById("replyFileInput");
   const replyInputEl = document.getElementById("replyInput");
   wireFormatToolbar("reply", replyInputEl);
@@ -596,13 +696,25 @@ function wireReplyComposer(post) {
     setReplyingTo(btn.dataset.replyId, btn.dataset.replyAuthor);
   });
 
-  document.getElementById("replyAttachBtn").addEventListener("click", () => {
+  document.getElementById("replyAttachImageBtn").addEventListener("click", () => {
+    if (!requireLogin()) return;
+    imageInput.click();
+  });
+  document.getElementById("replyAttachVideoBtn").addEventListener("click", () => {
+    if (!requireLogin()) return;
+    videoInput.click();
+  });
+  document.getElementById("replyAttachAudioBtn").addEventListener("click", () => {
+    if (!requireLogin()) return;
+    audioInput.click();
+  });
+  document.getElementById("replyAttachFileBtn").addEventListener("click", () => {
     if (!requireLogin()) return;
     fileInput.click();
   });
 
-  fileInput.addEventListener("change", () => {
-    stagedFile = fileInput.files[0] || null;
+  function stageFile(input) {
+    stagedFile = input.files[0] || null;
     const preview = document.getElementById("replyPreview");
     if (!stagedFile) {
       preview.innerHTML = "";
@@ -616,10 +728,18 @@ function wireReplyComposer(post) {
     `;
     document.getElementById("clearReplyFile").addEventListener("click", () => {
       stagedFile = null;
+      imageInput.value = "";
+      videoInput.value = "";
+      audioInput.value = "";
       fileInput.value = "";
       preview.innerHTML = "";
     });
-  });
+  }
+
+  imageInput.addEventListener("change", () => stageFile(imageInput));
+  videoInput.addEventListener("change", () => stageFile(videoInput));
+  audioInput.addEventListener("change", () => stageFile(audioInput));
+  fileInput.addEventListener("change", () => stageFile(fileInput));
 
   document.getElementById("sendReplyBtn").addEventListener("click", async () => {
     if (!requireLogin()) return;
@@ -693,11 +813,14 @@ function renderComposeAttachmentsPreview() {
     const url = URL.createObjectURL(f);
     const isVideo = f.type.startsWith("video/");
     const isAudio = f.type.startsWith("audio/");
+    const isImage = f.type.startsWith("image/");
     const inner = isVideo
       ? `<video src="${url}" controls></video>`
       : isAudio
       ? `<audio src="${url}" controls></audio>`
-      : `<img src="${url}" alt="">`;
+      : isImage
+      ? `<img src="${url}" alt="">`
+      : `<div class="doc-attachment-file">${ICONS.file} ${escapeHtml(f.name)}</div>`;
     return `
       <div class="doc-attachment" data-idx="${i}">
         ${inner}
@@ -741,12 +864,22 @@ function renderExploreCompose() {
       <div class="compose-topbar">
         <button class="compose-cancel" id="composeCancel">${ICONS.x} Cancel</button>
         <div class="compose-toolbar">
-          ${type !== "poll" ? `<button type="button" class="toolbar-btn" id="attachMediaBtn" title="Add photo/video">${ICONS.image}</button>` : ""}
+          ${type !== "poll" ? `
+            <button type="button" class="toolbar-btn toolbar-btn-labeled" id="attachImageBtn" title="Add photo">${ICONS.image}<span>Photo</span></button>
+            <button type="button" class="toolbar-btn toolbar-btn-labeled" id="attachVideoBtn" title="Add video">${ICONS.video}<span>Video</span></button>
+            <button type="button" class="toolbar-btn toolbar-btn-labeled" id="attachAudioBtn" title="Add audio">${ICONS.audio}<span>Audio</span></button>
+            <button type="button" class="toolbar-btn toolbar-btn-labeled" id="attachFileBtn" title="Add file">${ICONS.file}<span>File</span></button>
+          ` : ""}
         </div>
         <span class="compose-status" id="composeStatus"></span>
       </div>
 
-      ${type !== "poll" ? `<input type="file" id="mediaInput" accept="image/*,video/*" multiple style="display:none">` : ""}
+      ${type !== "poll" ? `
+        <input type="file" id="mediaImageInput" accept="image/*" multiple style="display:none">
+        <input type="file" id="mediaVideoInput" accept="video/*" multiple style="display:none">
+        <input type="file" id="mediaAudioInput" accept="audio/*" multiple style="display:none">
+        <input type="file" id="mediaFileInput" multiple style="display:none">
+      ` : ""}
 
       <div class="doc-page-wrap">
         <div class="doc-page">
@@ -790,8 +923,14 @@ function renderExploreCompose() {
       autoGrow(e.target);
       updateLivePreview("exploreLivePreview", e.target.value);
     });
-    document.getElementById("attachMediaBtn").addEventListener("click", () => document.getElementById("mediaInput").click());
-    document.getElementById("mediaInput").addEventListener("change", (e) => stageComposeFiles(e.target.files));
+    document.getElementById("attachImageBtn").addEventListener("click", () => document.getElementById("mediaImageInput").click());
+    document.getElementById("attachVideoBtn").addEventListener("click", () => document.getElementById("mediaVideoInput").click());
+    document.getElementById("attachAudioBtn").addEventListener("click", () => document.getElementById("mediaAudioInput").click());
+    document.getElementById("attachFileBtn").addEventListener("click", () => document.getElementById("mediaFileInput").click());
+    document.getElementById("mediaImageInput").addEventListener("change", (e) => stageComposeFiles(e.target.files));
+    document.getElementById("mediaVideoInput").addEventListener("change", (e) => stageComposeFiles(e.target.files));
+    document.getElementById("mediaAudioInput").addEventListener("change", (e) => stageComposeFiles(e.target.files));
+    document.getElementById("mediaFileInput").addEventListener("change", (e) => stageComposeFiles(e.target.files));
     renderComposeAttachmentsPreview();
     document.getElementById("postBtn").addEventListener("click", () => submitDiscussionOrAnnouncement(type));
   }
@@ -991,15 +1130,17 @@ function renderCompose() {
       <div class="compose-topbar">
         <button class="compose-cancel" id="composeCancel">${ICONS.x} Cancel</button>
         <div class="compose-toolbar">
-          <button class="toolbar-btn" id="attachImageBtn" title="Add image">${ICONS.image}</button>
-          <button class="toolbar-btn" id="attachVideoBtn" title="Add video">${ICONS.video}</button>
-          <button class="toolbar-btn" id="attachFileBtn" title="Add file">${ICONS.file}</button>
+          <button class="toolbar-btn toolbar-btn-labeled" id="attachImageBtn" title="Add image">${ICONS.image}<span>Photo</span></button>
+          <button class="toolbar-btn toolbar-btn-labeled" id="attachVideoBtn" title="Add video">${ICONS.video}<span>Video</span></button>
+          <button class="toolbar-btn toolbar-btn-labeled" id="attachAudioBtn" title="Add audio">${ICONS.audio}<span>Audio</span></button>
+          <button class="toolbar-btn toolbar-btn-labeled" id="attachFileBtn" title="Add file">${ICONS.file}<span>File</span></button>
         </div>
         <span class="compose-status" id="composeStatus">${d.status === "draft" ? "Draft" : ""}</span>
       </div>
 
       <input type="file" id="imageInput" accept="image/*" style="display:none">
       <input type="file" id="videoInput" accept="video/*" style="display:none">
+      <input type="file" id="audioInput" accept="audio/*" style="display:none">
       <input type="file" id="fileInput" style="display:none">
 
       <div class="doc-page-wrap">
@@ -1054,9 +1195,11 @@ function renderCompose() {
 
   document.getElementById("attachImageBtn").addEventListener("click", () => document.getElementById("imageInput").click());
   document.getElementById("attachVideoBtn").addEventListener("click", () => document.getElementById("videoInput").click());
+  document.getElementById("attachAudioBtn").addEventListener("click", () => document.getElementById("audioInput").click());
   document.getElementById("attachFileBtn").addEventListener("click", () => document.getElementById("fileInput").click());
   document.getElementById("imageInput").addEventListener("change", (e) => uploadAttachment(e.target.files[0], "image"));
   document.getElementById("videoInput").addEventListener("change", (e) => uploadAttachment(e.target.files[0], "video"));
+  document.getElementById("audioInput").addEventListener("change", (e) => uploadAttachment(e.target.files[0], "audio"));
   document.getElementById("fileInput").addEventListener("change", (e) => uploadAttachment(e.target.files[0], "file"));
 
   document.getElementById("saveDraftBtn").addEventListener("click", () => saveDraft(true));
@@ -1230,11 +1373,11 @@ async function renderReported() {
 }
 
 function reportedItem(r) {
-  const canBanPoll = r.post_exists && r.post_is_anonymous && r.post_kind !== "explore_reply";
+  const canBanPoll = r.post_exists && r.post_is_anonymous;
   return `
     <div class="mod-item" data-report-id="${r.id}" data-post-kind="${r.post_kind}" data-post-id="${r.post_id}">
       <div class="mod-item-meta">${escapeHtml(r.post_type)} · reported by ${escapeHtml(r.reported_by_name)} · ${timeAgo(r.created_at)}</div>
-      ${r.post_type === "reply" ? "" : `<h3 class="mod-item-title">${escapeHtml(r.post_title || "(untitled)")}</h3>`}
+      <h3 class="mod-item-title">${escapeHtml(r.post_title || "(untitled)")}</h3>
       <p class="mod-item-body">${escapeHtml(plainPreview(r.post_body || "", 300))}</p>
       <div class="mod-actions-row">
         <button class="mod-btn mod-btn-dismiss" data-action="cancel">Cancel report</button>
@@ -1570,12 +1713,217 @@ function wireReactionButtons(root) {
   });
 }
 
+// ---------- onboarding ----------
+// First-run welcome flow: shown once per account, right after sign-in,
+// before the person can use anything else. Blocks the whole site (no
+// close button, no click-through on the backdrop) until they explicitly
+// accept — enforced server-side via users.onboarded_at, not just a
+// frontend flag, so it can't be skipped by clearing localStorage.
+
+const ONBOARDING_FEATURES = [
+  {
+    icon: ICONS.incognito,
+    title: "Anonymity, done right",
+    desc: "Post anonymously with a fresh, random name generated just for that post. Not even you can prove after the fact which anonymous post was yours.",
+  },
+  {
+    icon: ICONS.discussion,
+    title: "Explore",
+    desc: "Start polls, spark discussions, and share announcements with the rest of campus.",
+  },
+  {
+    icon: ICONS.newspaper,
+    title: "E-Magazine",
+    desc: "Submit articles and read what's been published — compiled into a downloadable campus newspaper.",
+  },
+  {
+    icon: ICONS.thumbsUp,
+    title: "Reactions",
+    desc: "A simple like or dislike on every post and reply. No leaderboards, no karma — just honest signal.",
+  },
+  {
+    icon: ICONS.shield,
+    title: "Community-moderated",
+    desc: "Reports go to real moderators, and a transparent, community-voted process exists for serious cases of anonymity abuse.",
+  },
+];
+
+function onboardingWelcomeStep() {
+  return `
+    <div class="onboarding-step onboarding-step-welcome">
+      <div class="onboarding-wordmark">J256</div>
+      <h1 class="onboarding-title">Welcome to J256</h1>
+      <p class="onboarding-lead">
+        The campus platform built by and for the IISER Thiruvananthapuram community —
+        polls, discussions, announcements, and a student-run e-magazine, all in one place.
+      </p>
+      <p class="onboarding-sub">
+        Before you dive in, we'd like to walk you through what makes this space work,
+        and what we ask of everyone who uses it. It'll only take a minute.
+      </p>
+    </div>
+  `;
+}
+
+function onboardingFeaturesStep() {
+  const features = ONBOARDING_FEATURES.map(f => `
+    <div class="onboarding-feature">
+      <div class="onboarding-feature-icon">${f.icon}</div>
+      <div class="onboarding-feature-text">
+        <h4>${escapeHtml(f.title)}</h4>
+        <p>${escapeHtml(f.desc)}</p>
+      </div>
+    </div>
+  `).join("");
+
+  return `
+    <div class="onboarding-step">
+      <p class="onboarding-eyebrow">Step 2 of 3</p>
+      <h2 class="onboarding-heading">Things you need to know</h2>
+      <div class="onboarding-features">${features}</div>
+
+      <h3 class="onboarding-subheading">Our philosophy</h3>
+      <div class="onboarding-philosophy">
+        <p>J256 exists on the belief that a campus is healthiest when people can speak
+        plainly — about ideas, disagreements, and everything in between — without always
+        having to attach their name to it.</p>
+        <p>Anonymity here is a tool for honesty, not a shield for cruelty. We built the
+        platform to protect the first, and we push back hard against the second.</p>
+      </div>
+    </div>
+  `;
+}
+
+const ONBOARDING_GUIDELINES = [
+  "Be respectful. Disagreement is welcome; harassment, hate speech, and personal attacks are not.",
+  "Don't try to unmask anyone. Attempting to identify an anonymous poster outside the official Ban Poll process is a serious violation.",
+  "No doxxing. Never share someone else's personal information without their consent.",
+  "Stay honest. Don't impersonate others or knowingly spread false information.",
+  "Report, don't retaliate. If something crosses the line, report it — moderators are here to help.",
+  "This complements, not replaces, IISER TVM's code of conduct. J256 operates alongside institutional policy, not instead of it.",
+];
+
+function onboardingGuidelinesStep() {
+  const items = ONBOARDING_GUIDELINES.map((g, i) => `
+    <li><span class="onboarding-guideline-num">${i + 1}</span><span>${escapeHtml(g)}</span></li>
+  `).join("");
+
+  return `
+    <div class="onboarding-step">
+      <p class="onboarding-eyebrow">Step 3 of 3</p>
+      <h2 class="onboarding-heading">Community Guidelines</h2>
+      <p class="onboarding-sub" style="margin-bottom:20px;">Please read through before continuing.</p>
+      <ol class="onboarding-guidelines">${items}</ol>
+
+      <label class="onboarding-agree-row">
+        <input type="checkbox" id="onboardingAgreeCheckbox">
+        <span>I have read and agree to the Community Guidelines and Terms of Use.</span>
+      </label>
+    </div>
+  `;
+}
+
+const ONBOARDING_STEPS = [onboardingWelcomeStep, onboardingFeaturesStep, onboardingGuidelinesStep];
+let onboardingStepIndex = 0;
+
+function maybeShowOnboarding() {
+  if (!currentUser || currentUser.onboarded) {
+    removeOnboardingOverlay();
+    return;
+  }
+  onboardingStepIndex = 0;
+  renderOnboardingOverlay();
+}
+
+function removeOnboardingOverlay() {
+  const el = document.getElementById("onboardingOverlay");
+  if (el) el.remove();
+  document.body.classList.remove("onboarding-lock");
+  const shell = document.querySelector(".shell");
+  if (shell) shell.inert = false;
+}
+
+function renderOnboardingOverlay() {
+  let overlay = document.getElementById("onboardingOverlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "onboardingOverlay";
+    overlay.className = "onboarding-overlay";
+    document.body.appendChild(overlay);
+  }
+  document.body.classList.add("onboarding-lock");
+  // inert (not just visual covering) so Tab/screen-reader navigation
+  // can't reach the sidebar or page content hiding underneath — this is
+  // meant to actually gate the site, not just look like it does.
+  const shell = document.querySelector(".shell");
+  if (shell) shell.inert = true;
+
+  const isFirst = onboardingStepIndex === 0;
+  const isLast = onboardingStepIndex === ONBOARDING_STEPS.length - 1;
+
+  overlay.innerHTML = `
+    <div class="onboarding-card">
+      <div class="onboarding-dots">
+        ${ONBOARDING_STEPS.map((_, i) => `<span class="onboarding-dot ${i === onboardingStepIndex ? "onboarding-dot-active" : ""}"></span>`).join("")}
+      </div>
+      <div class="onboarding-body">${ONBOARDING_STEPS[onboardingStepIndex]()}</div>
+      <div class="onboarding-footer">
+        <button type="button" class="onboarding-btn onboarding-btn-ghost" id="onboardingPrevBtn" ${isFirst ? "disabled" : ""}>
+          ${isFirst ? "" : "← Previous"}
+        </button>
+        <button type="button" class="onboarding-btn onboarding-btn-primary" id="onboardingNextBtn" ${isLast ? "disabled" : ""}>
+          ${isLast ? "Agree & Continue" : "Next →"}
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("onboardingPrevBtn").addEventListener("click", () => {
+    if (onboardingStepIndex > 0) {
+      onboardingStepIndex--;
+      renderOnboardingOverlay();
+    }
+  });
+
+  document.getElementById("onboardingNextBtn").addEventListener("click", async () => {
+    if (!isLast) {
+      onboardingStepIndex++;
+      renderOnboardingOverlay();
+      return;
+    }
+    await acceptOnboarding();
+  });
+
+  if (isLast) {
+    const checkbox = document.getElementById("onboardingAgreeCheckbox");
+    const nextBtn = document.getElementById("onboardingNextBtn");
+    checkbox.addEventListener("change", () => {
+      nextBtn.disabled = !checkbox.checked;
+    });
+  }
+}
+
+async function acceptOnboarding() {
+  const nextBtn = document.getElementById("onboardingNextBtn");
+  nextBtn.disabled = true;
+  nextBtn.textContent = "Just a moment…";
+  try {
+    currentUser = await fetchJSON(`${API}/auth/onboarding/accept`, { method: "POST" });
+    removeOnboardingOverlay();
+  } catch (e) {
+    alert(e.message);
+    nextBtn.disabled = false;
+    nextBtn.textContent = "Agree & Continue";
+  }
+}
+
 // ---------- boot ----------
 
 if (new URLSearchParams(window.location.search).get("view") === "account") {
   currentView = "account";
 }
 checkLoginError();
+wireNotifBell();
 loadCurrentUser();
 setActiveNav(currentView);
 render();

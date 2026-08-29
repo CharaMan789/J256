@@ -168,6 +168,14 @@ def init_db():
             conn.execute(
                 "UPDATE users SET name_verified = 1 WHERE iiser_email IS NOT NULL"
             )
+        # Onboarding: shown once on first use — a 3-step "Welcome to
+        # J256" modal (philosophy, features, guidelines) that the person
+        # must explicitly accept before using the rest of the site. NULL
+        # until accepted; sneaking a plain "accepted": true through a
+        # boolean field on the frontend wouldn't cut it, since this needs
+        # to survive the person's browser/device changing — hence storing
+        # server-side, per-account, with a timestamp instead.
+        _add_column_if_missing(conn, "users", "onboarded_at", "onboarded_at TEXT")
         # Per-post random pseudonyms (2026-08-24): each anonymous post/reply
         # gets its own random name, generated once at creation and stored
         # on the row itself — not the account's fixed users.pseudonym. Two
@@ -196,13 +204,23 @@ def init_db():
             CREATE TABLE IF NOT EXISTS post_attachments (
                 id SERIAL PRIMARY KEY,
                 post_id INTEGER NOT NULL,
-                kind TEXT NOT NULL CHECK (kind IN ('image', 'video', 'file')),
+                kind TEXT NOT NULL CHECK (kind IN ('image', 'video', 'audio', 'file')),
                 file_path TEXT NOT NULL,
                 original_name TEXT NOT NULL,
                 uploaded_at TEXT NOT NULL DEFAULT (NOW()),
                 FOREIGN KEY (post_id) REFERENCES posts(id)
             )
         """)
+        # Same situation as explore_attachments/reactions below: Postgres
+        # won't widen an inline CHECK via ALTER TABLE ADD COLUMN, and this
+        # table may already exist on Render with the old, narrower
+        # constraint (no 'audio'). Drop and recreate; a no-op once
+        # already applied. 'audio' added 2026-08-29.
+        conn.execute("ALTER TABLE post_attachments DROP CONSTRAINT IF EXISTS post_attachments_kind_check")
+        conn.execute(
+            "ALTER TABLE post_attachments ADD CONSTRAINT post_attachments_kind_check "
+            "CHECK (kind IN ('image', 'video', 'audio', 'file'))"
+        )
         # Doubts / Opinions / Ideas — the OLDER dormant board. Left as-is;
         # not linked in the nav, unrelated to the Explore feature below.
         conn.execute("""
@@ -314,7 +332,7 @@ def init_db():
                 id SERIAL PRIMARY KEY,
                 owner_type TEXT NOT NULL CHECK (owner_type IN ('post', 'reply')),
                 owner_id INTEGER NOT NULL,
-                kind TEXT NOT NULL CHECK (kind IN ('image', 'video', 'audio')),
+                kind TEXT NOT NULL CHECK (kind IN ('image', 'video', 'audio', 'file')),
                 file_path TEXT NOT NULL,
                 original_name TEXT NOT NULL,
                 uploaded_at TEXT NOT NULL DEFAULT (NOW())
@@ -322,13 +340,16 @@ def init_db():
         """)
         # Same situation as the reactions constraint below: Postgres won't
         # widen an inline CHECK via ALTER TABLE ADD COLUMN, and this table
-        # may already exist on Render with the old, narrower constraint
-        # (no 'audio'). Drop and recreate under Postgres's default
-        # auto-generated constraint name; a no-op once already applied.
+        # may already exist on Render with an older, narrower constraint
+        # (missing 'audio' and/or 'file'). Drop and recreate under
+        # Postgres's default auto-generated constraint name; a no-op once
+        # already applied. 'file' added 2026-08-29 for PDFs/documents —
+        # anything that isn't an image/video/audio (see explore.py
+        # _save_attachments for the detection logic).
         conn.execute("ALTER TABLE explore_attachments DROP CONSTRAINT IF EXISTS explore_attachments_kind_check")
         conn.execute(
             "ALTER TABLE explore_attachments ADD CONSTRAINT explore_attachments_kind_check "
-            "CHECK (kind IN ('image', 'video', 'audio'))"
+            "CHECK (kind IN ('image', 'video', 'audio', 'file'))"
         )
 
         # --- Reactions: thumbs up/down on a post OR a discussion reply.
@@ -365,18 +386,16 @@ def init_db():
             "CHECK (post_kind IN ('explore', 'article', 'explore_reply'))"
         )
 
-        # --- Reporting: any signed-in user can report a post OR a
-        # discussion reply (including a reply to a reply — both are just
-        # rows in explore_replies, so post_kind='explore_reply' covers
-        # both uniformly, same convention as reactions above). Moderators
-        # review reported items and either cancel the report or warn the
+        # --- Reporting: any signed-in user can report a post; moderators
+        # review reported posts and either cancel the report or warn the
         # author (an emailed message — the moderator never sees the
         # recipient's address; see moderation.py). One report per user
-        # per item.
+        # per post. Covers explore posts (poll/discussion/announcement)
+        # and newspaper articles via post_kind.
         conn.execute("""
             CREATE TABLE IF NOT EXISTS reports (
                 id SERIAL PRIMARY KEY,
-                post_kind TEXT NOT NULL CHECK (post_kind IN ('explore', 'article', 'explore_reply')),
+                post_kind TEXT NOT NULL CHECK (post_kind IN ('explore', 'article')),
                 post_id INTEGER NOT NULL,
                 reported_by_user_id INTEGER NOT NULL,
                 created_at TEXT NOT NULL DEFAULT (NOW()),
@@ -385,14 +404,6 @@ def init_db():
                 FOREIGN KEY (reported_by_user_id) REFERENCES users(id)
             )
         """)
-        # Same Postgres CHECK-widening pattern as above — this table may
-        # already exist on Render with the old, narrower constraint (no
-        # 'explore_reply'). No-op once already applied.
-        conn.execute("ALTER TABLE reports DROP CONSTRAINT IF EXISTS reports_post_kind_check")
-        conn.execute(
-            "ALTER TABLE reports ADD CONSTRAINT reports_post_kind_check "
-            "CHECK (post_kind IN ('explore', 'article', 'explore_reply'))"
-        )
         # Warnings sent to a post's author. The moderator writes the
         # reason; the email is "sent" to the author's address, but the
         # moderator is never shown who the recipient is.
@@ -445,6 +456,34 @@ def init_db():
                 created_at TEXT NOT NULL DEFAULT (NOW()),
                 PRIMARY KEY (poll_id, user_id),
                 FOREIGN KEY (poll_id) REFERENCES ban_polls(id),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+
+        # --- Notifications: tells someone "your discussion/comment got a
+        # reply" without ever saying which discussion/comment, who
+        # replied, or what was said. This is a deliberate extension of the
+        # same anonymity guarantee explore posts already have — recall
+        # that explore_posts' is_mine is forced False for anonymous posts
+        # even in the author's own session, specifically so ownership of
+        # an anonymous post can never be discovered through the UI, even
+        # by the account owner on a shared/borrowed login. A notification
+        # naming the post or previewing the reply text would break that
+        # guarantee immediately: anyone with a glance at the account's
+        # notifications could match the preview against the public feed
+        # and identify the account as that post's author. So this table
+        # intentionally has no post_id / reply_id / body column at all —
+        # not hidden from the API, not present in the database, period.
+        # There is no "which one was it" to ever leak, including to the
+        # account owner themselves days later, including to a future
+        # feature that might otherwise be tempted to expose it.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS notifications (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                kind TEXT NOT NULL CHECK (kind IN ('reply_to_post', 'reply_to_reply')),
+                is_read INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL DEFAULT (NOW()),
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         """)

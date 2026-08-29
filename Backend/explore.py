@@ -4,6 +4,7 @@ from fastapi import APIRouter, Form, File, UploadFile, HTTPException, Depends, Q
 
 from auth import require_user, get_current_user
 from database import get_conn
+from notifications import create_notification
 from pseudonyms import generate_pseudonym
 from reactions import reaction_counts, my_reaction, toggle_reaction
 from storage import upload_fileobj, delete_key, public_url
@@ -13,6 +14,7 @@ router = APIRouter()
 VALID_TYPES = {"poll", "discussion", "announcement"}
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm", ".mkv", ".avi"}
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac"}
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".heic", ".heif"}
 
 EXPLORE_SELECT = """
     SELECT explore_posts.*, users.name AS user_name, users.picture AS user_picture,
@@ -70,8 +72,13 @@ def _save_attachments(conn, owner_type, owner_id, files):
             kind = "video"
         elif ext in AUDIO_EXTENSIONS:
             kind = "audio"
-        else:
+        elif ext in IMAGE_EXTENSIONS:
             kind = "image"
+        else:
+            # PDFs, docs, and anything else that isn't image/video/audio
+            # — shown as a plain downloadable file link on the frontend
+            # rather than guessed at as an image (2026-08-29).
+            kind = "file"
         # Uploaded straight to R2 (Cloudflare object storage) instead of
         # local disk — survives every Render redeploy/restart/spin-down,
         # since it lives completely outside the app server's own
@@ -423,9 +430,10 @@ async def create_reply(
         post = conn.execute("SELECT * FROM explore_posts WHERE id = ?", (post_id,)).fetchone()
         if not post or post["type"] != "discussion":
             raise HTTPException(404, "Not found")
+        parent = None
         if parent_reply_id is not None:
             parent = conn.execute(
-                "SELECT id FROM explore_replies WHERE id = ? AND post_id = ?",
+                "SELECT * FROM explore_replies WHERE id = ? AND post_id = ?",
                 (parent_reply_id, post_id),
             ).fetchone()
             if not parent:
@@ -438,6 +446,16 @@ async def create_reply(
         reply_id = cur.lastrowid
         if file and file.filename:
             _save_attachments(conn, "reply", reply_id, [file])
+
+        # See notifications.py — this deliberately says only "someone
+        # replied", never which post/reply or what was said.
+        if parent is not None:
+            target_id, notif_kind = parent["user_id"], "reply_to_reply"
+        else:
+            target_id, notif_kind = post["user_id"], "reply_to_post"
+        if target_id != user["id"]:
+            create_notification(conn, target_id, notif_kind)
+
         conn.commit()
         row = conn.execute(REPLY_SELECT + " WHERE explore_replies.id = ?", (reply_id,)).fetchone()
         return _reply_to_dict(conn, row, user, post["user_id"])

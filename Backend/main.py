@@ -14,6 +14,7 @@ import auth
 import doubts
 import explore
 import moderation
+import notifications
 from auth import require_user, get_current_user, FRONTEND_URL
 from database import init_db, get_conn
 from magazine import build_magazine_pdf
@@ -25,7 +26,7 @@ BASE_DIR = Path(__file__).parent
 FRONTEND_DIR = BASE_DIR.parent / "Frontend"
 
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "dev-secret-change-me-in-.env")
-VALID_KINDS = {"image", "video", "file"}
+VALID_KINDS = {"image", "video", "audio", "file"}
 
 app = FastAPI(title="J256 - IISER TVM community")
 
@@ -44,6 +45,7 @@ app.include_router(auth.router)
 app.include_router(doubts.router)
 app.include_router(explore.router)
 app.include_router(moderation.router)
+app.include_router(notifications.router)
 
 
 @app.on_event("startup")

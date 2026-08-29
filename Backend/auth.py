@@ -122,13 +122,31 @@ async def me(request: Request):
     return JSONResponse(content=get_current_user(request), headers=NO_STORE_HEADERS)
 
 
+@router.post("/auth/onboarding/accept")
+async def accept_onboarding(request: Request):
+    """Records that the signed-in user has clicked through and agreed to
+    the welcome/philosophy/guidelines modal. Idempotent — accepting again
+    just refreshes nothing (onboarded_at is only ever set once, never
+    overwritten), so a double-click or retry can't cause issues."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        raise HTTPException(401, "Sign in first")
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE users SET onboarded_at = NOW() WHERE id = ? AND onboarded_at IS NULL",
+            (user_id,),
+        )
+        conn.commit()
+    return JSONResponse(content=get_current_user(request), headers=NO_STORE_HEADERS)
+
+
 def get_current_user(request: Request):
     user_id = request.session.get("user_id")
     if not user_id:
         return None
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT id, email, name, picture, pseudonym, is_moderator, strikes, banned "
+            "SELECT id, email, name, picture, pseudonym, is_moderator, strikes, banned, onboarded_at "
             "FROM users WHERE id = ?",
             (user_id,),
         ).fetchone()
@@ -137,6 +155,7 @@ def get_current_user(request: Request):
     d = dict(row)
     d["is_moderator"] = bool(d["is_moderator"])
     d["banned"] = bool(d["banned"])
+    d["onboarded"] = d["onboarded_at"] is not None
     return d
 
 
