@@ -12,6 +12,9 @@ from storage import upload_fileobj, delete_key, public_url
 router = APIRouter()
 
 VALID_TYPES = {"poll", "discussion", "announcement"}
+# Classic forum-style pagination (like an imageboard) instead of infinite
+# scroll — 25 posts per page, page numbers at the bottom of the feed.
+EXPLORE_PAGE_SIZE = 25
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm", ".mkv", ".avi"}
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac"}
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".heic", ".heif"}
@@ -287,20 +290,44 @@ async def create_announcement(
 @router.get("/explore")
 def list_explore(
     type: str | None = Query(None),
+    page: int = Query(1, ge=1),
     user: dict | None = Depends(get_current_user),
 ):
-    query = EXPLORE_SELECT
+    """Paginated like an old-school forum/imageboard rather than infinite
+    scroll: a fixed EXPLORE_PAGE_SIZE (25) posts per page, newest first,
+    with page numbers at the bottom instead of auto-loading more on
+    scroll. Returns the page of posts alongside the pagination metadata
+    the frontend needs to render page links (total, total_pages)."""
+    where = ""
     params = []
     if type:
         if type not in VALID_TYPES:
             raise HTTPException(400, f"type must be one of {sorted(VALID_TYPES)}")
-        query += " WHERE explore_posts.type = ?"
+        where = " WHERE explore_posts.type = ?"
         params.append(type)
-    query += " ORDER BY explore_posts.created_at DESC"
 
     with get_conn() as conn:
-        rows = conn.execute(query, params).fetchall()
-        return [_post_to_dict(conn, r, user) for r in rows]
+        total = conn.execute(
+            "SELECT COUNT(*) AS n FROM explore_posts" + where, params
+        ).fetchone()["n"]
+        total_pages = max(1, (total + EXPLORE_PAGE_SIZE - 1) // EXPLORE_PAGE_SIZE)
+        page = min(page, total_pages)
+        offset = (page - 1) * EXPLORE_PAGE_SIZE
+
+        query = (
+            EXPLORE_SELECT + where + " ORDER BY explore_posts.created_at DESC "
+            "LIMIT ? OFFSET ?"
+        )
+        rows = conn.execute(query, params + [EXPLORE_PAGE_SIZE, offset]).fetchall()
+        posts = [_post_to_dict(conn, r, user) for r in rows]
+
+    return {
+        "posts": posts,
+        "page": page,
+        "per_page": EXPLORE_PAGE_SIZE,
+        "total": total,
+        "total_pages": total_pages,
+    }
 
 
 @router.get("/explore/{post_id}")

@@ -98,6 +98,17 @@ def send_warning_email(to_email: str, reason: str):
         print(f"[email send failed] To: {to_email} — {e}\nReason was:\n{reason}")
 
 
+# ---------- moderator dashboard stats ----------
+
+@router.get("/moderation/user-count")
+def user_count(moderator: dict = Depends(require_moderator)):
+    """Total registered accounts — the same T value used as the turnout
+    denominator in ban poll resolution (see TURNOUT_RATIO / _total_users
+    below). Exposed here so moderators can see it directly."""
+    with get_conn() as conn:
+        return {"total_users": _total_users(conn)}
+
+
 # ---------- reporting (any signed-in user) ----------
 
 @router.post("/reports")

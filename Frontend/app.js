@@ -162,6 +162,7 @@ function renderAuthArea() {
           <button class="user-chip-out" id="logoutLink">sign out</button>
         </div>
       </div>
+      ${currentUser.is_moderator ? `<span class="mod-t-value" id="modTValue">T: …</span>` : ""}
     `;
     document.getElementById("logoutLink").addEventListener("click", (e) => {
       e.stopPropagation();
@@ -174,6 +175,7 @@ function renderAuthArea() {
         goToAccount();
       }
     });
+    if (currentUser.is_moderator) loadModTValue();
   } else {
     authArea.innerHTML = `
       <div class="auth-signed-out">
@@ -183,6 +185,18 @@ function renderAuthArea() {
     document.getElementById("signinBtn").addEventListener("click", () => {
       window.location.href = `${API}/auth/login`;
     });
+  }
+}
+
+// "T value" — total registered users, same denominator ban polls use for
+// turnout (see moderation.py K_RATIO/TURNOUT_RATIO). Moderator-only.
+async function loadModTValue() {
+  try {
+    const { total_users } = await fetchJSON(`${API}/moderation/user-count`);
+    const el = document.getElementById("modTValue");
+    if (el) el.textContent = `T: ${total_users}`;
+  } catch (e) {
+    // Silent — this is a small sidebar badge, not worth an error banner.
   }
 }
 
@@ -357,6 +371,8 @@ function renderHome() {
 // ---------- explore ----------
 
 let explorePosts = [];
+let explorePage = 1;
+let exploreTotalPages = 1;
 let exploreDetailId = null;
 let exploreComposeType = null; // 'poll' | 'discussion' | 'announcement'
 let exploreComposeFiles = [];
@@ -391,11 +407,14 @@ function openExploreCompose(type) {
   render();
 }
 
-async function renderExplore() {
+async function renderExplore(page) {
+  if (page) explorePage = page;
   appEl.innerHTML = `<div class="page-wrap"><p class="empty-state">Loading Explore…</p></div>`;
   try {
-    const posts = await fetchJSON(`${API}/explore`);
-    explorePosts = posts;
+    const data = await fetchJSON(`${API}/explore?page=${explorePage}`);
+    explorePosts = data.posts;
+    explorePage = data.page;
+    exploreTotalPages = data.total_pages;
     appEl.innerHTML = `
       <div class="page-wrap">
         <div class="explore-header-row">
@@ -414,16 +433,38 @@ async function renderExplore() {
           </div>
         </div>
         <div class="explore-feed" id="exploreFeed">
-          ${posts.length === 0
+          ${explorePosts.length === 0
             ? `<div class="empty-state">Nothing here yet. Be the first to post.</div>`
-            : posts.map(explorePostCard).join("")}
+            : explorePosts.map(explorePostCard).join("")}
         </div>
+        ${explorePager()}
       </div>
     `;
     wireExploreFeed();
   } catch (e) {
     appEl.innerHTML = `<div class="page-wrap"><p class="empty-state">Couldn't load Explore.<br>${escapeHtml(e.message)}</p></div>`;
   }
+}
+
+// Old-forum-style pager: numbered page links + Prev/Next, shown at the
+// bottom of the feed once you've scrolled past the last post on the
+// page — no infinite scroll, no auto-loading more content.
+function explorePager() {
+  if (exploreTotalPages <= 1) return "";
+  const pages = [];
+  for (let i = 1; i <= exploreTotalPages; i++) {
+    pages.push(`
+      <button type="button" class="pager-page ${i === explorePage ? "pager-page-active" : ""}"
+        data-page="${i}" ${i === explorePage ? "disabled" : ""}>${i}</button>
+    `);
+  }
+  return `
+    <div class="explore-pager">
+      <button type="button" class="pager-nav" data-page="${explorePage - 1}" ${explorePage <= 1 ? "disabled" : ""}>&laquo; Prev</button>
+      <div class="pager-pages">${pages.join("")}</div>
+      <button type="button" class="pager-nav" data-page="${explorePage + 1}" ${explorePage >= exploreTotalPages ? "disabled" : ""}>Next &raquo;</button>
+    </div>
+  `;
 }
 
 function wireExploreFeed() {
@@ -454,6 +495,14 @@ function wireExploreFeed() {
   });
   document.querySelectorAll(".post-card-clickable").forEach(card => {
     card.addEventListener("click", () => openExploreDetail(card.dataset.id));
+  });
+  document.querySelectorAll(".pager-page, .pager-nav").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const n = parseInt(btn.dataset.page, 10);
+      if (!n || n < 1) return;
+      renderExplore(n);
+      appEl.scrollIntoView({ behavior: "instant", block: "start" });
+    });
   });
   wireReportButtons();
   wireReactionButtons();
@@ -1746,6 +1795,11 @@ const ONBOARDING_FEATURES = [
     title: "Community-moderated",
     desc: "Reports go to real moderators, and a transparent, community-voted process exists for serious cases of anonymity abuse.",
   },
+  {
+    icon: ICONS.incognito,
+    title: "Private by default, even from yourself",
+    desc: "Notifications only ever say \"someone replied\" — never who, what, or where. Even your own activity trail can't be used to connect you back to something you posted anonymously.",
+  },
 ];
 
 function onboardingWelcomeStep() {
@@ -1754,12 +1808,12 @@ function onboardingWelcomeStep() {
       <div class="onboarding-wordmark">J256</div>
       <h1 class="onboarding-title">Welcome to J256</h1>
       <p class="onboarding-lead">
-        The campus platform built by and for the IISER Thiruvananthapuram community —
-        polls, discussions, announcements, and a student-run e-magazine, all in one place.
+        An independent, student-built platform for the IISER Thiruvananthapuram
+        campus — polls, discussions, announcements, and an e-magazine, all in one place.
       </p>
       <p class="onboarding-sub">
-        Before you dive in, we'd like to walk you through what makes this space work,
-        and what we ask of everyone who uses it. It'll only take a minute.
+        Here's what makes this space work, and what's asked of everyone who uses it.
+        Takes a minute.
       </p>
     </div>
   `;
@@ -1782,13 +1836,15 @@ function onboardingFeaturesStep() {
       <h2 class="onboarding-heading">Things you need to know</h2>
       <div class="onboarding-features">${features}</div>
 
-      <h3 class="onboarding-subheading">Our philosophy</h3>
+      <h3 class="onboarding-subheading">The philosophy</h3>
       <div class="onboarding-philosophy">
-        <p>J256 exists on the belief that a campus is healthiest when people can speak
-        plainly — about ideas, disagreements, and everything in between — without always
-        having to attach their name to it.</p>
-        <p>Anonymity here is a tool for honesty, not a shield for cruelty. We built the
-        platform to protect the first, and we push back hard against the second.</p>
+        <p>If everyone were free to speak what makes them curious, what bothers them,
+        what inspires them — to say their mind and their heart without always having to
+        attach a name to it — a campus gets better at seeing itself. Speaking plainly
+        here is a way of finding pieces of yourself in other people.</p>
+        <p>That's what anonymity is for on J256: a tool for honesty, not a shield for
+        cruelty. The platform is built to protect the first and push back against the
+        second.</p>
       </div>
     </div>
   `;
