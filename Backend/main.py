@@ -1,6 +1,4 @@
 import os
-import shutil
-import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -16,19 +14,14 @@ import auth
 import doubts
 import explore
 import moderation
-from auth import require_user, get_current_user
+from auth import require_user, get_current_user, FRONTEND_URL
 from database import init_db, get_conn
 from magazine import build_magazine_pdf
 from pseudonyms import generate_pseudonym
 from reactions import reaction_counts, my_reaction, toggle_reaction
+from storage import upload_fileobj, delete_key, public_url
 
 BASE_DIR = Path(__file__).parent
-# Capital "Frontend" — must match the exact folder name in the repo. On
-# Windows/Mac this would silently work either way, but Render's Linux
-# filesystem is case-sensitive, so a mismatch here means these mounts
-# point at a folder that doesn't exist and everything under them 404s.
-UPLOAD_DIR = BASE_DIR.parent / "Frontend" / "uploads"
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 FRONTEND_DIR = BASE_DIR.parent / "Frontend"
 
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "dev-secret-change-me-in-.env")
@@ -36,7 +29,17 @@ VALID_KINDS = {"image", "video", "file"}
 
 app = FastAPI(title="J256 - IISER TVM community")
 
-app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, same_site="lax")
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SESSION_SECRET,
+    same_site="lax",
+    # https_only=True in production (Render serves over HTTPS), False for
+    # local dev at http://127.0.0.1 — hardcoding True would silently break
+    # sign-in when testing locally, since the cookie would never get set
+    # over plain HTTP. Driven by FRONTEND_URL rather than a separate env
+    # var, since that's already set correctly in both places.
+    https_only=FRONTEND_URL.startswith("https://"),
+)
 app.include_router(auth.router)
 app.include_router(doubts.router)
 app.include_router(explore.router)
@@ -63,7 +66,13 @@ def _attachments_for(conn, post_id):
         {
             "id": r["id"],
             "kind": r["kind"],
-            "url": f"/uploads/{r['file_path']}",
+            # file_path stores the R2 object key (predates the R2
+            # migration — kept as the column name so no schema change
+            # was needed). storage_key is also exposed under its own
+            # name so magazine.py can fetch the raw bytes to embed in
+            # the PDF without needing to parse it back out of the URL.
+            "url": public_url(r["file_path"]),
+            "storage_key": r["file_path"],
             "original_name": r["original_name"],
         }
         for r in rows
@@ -200,9 +209,7 @@ def delete_draft(post_id: int, user: dict = Depends(require_user)):
             "SELECT file_path FROM post_attachments WHERE post_id = ?", (post_id,)
         ).fetchall()
         for a in attachments:
-            f = UPLOAD_DIR / a["file_path"]
-            if f.exists():
-                f.unlink()
+            delete_key(a["file_path"])
         conn.execute("DELETE FROM post_attachments WHERE post_id = ?", (post_id,))
         conn.execute("DELETE FROM posts WHERE id = ?", (post_id,))
         conn.commit()
@@ -220,21 +227,17 @@ async def add_attachment(
         raise HTTPException(400, f"kind must be one of {sorted(VALID_KINDS)}")
     with get_conn() as conn:
         _get_owned_draft(conn, post_id, user)
-        ext = Path(file.filename).suffix
-        stored_name = f"{uuid.uuid4().hex}{ext}"
-        dest = UPLOAD_DIR / stored_name
-        with dest.open("wb") as f:
-            shutil.copyfileobj(file.file, f)
+        object_key = upload_fileobj(file.file, file.filename)
         cur = conn.execute(
             "INSERT INTO post_attachments (post_id, kind, file_path, original_name) VALUES (?, ?, ?, ?)",
-            (post_id, kind, stored_name, file.filename),
+            (post_id, kind, object_key, file.filename),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM post_attachments WHERE id = ?", (cur.lastrowid,)).fetchone()
     return {
         "id": row["id"],
         "kind": row["kind"],
-        "url": f"/uploads/{row['file_path']}",
+        "url": public_url(row["file_path"]),
         "original_name": row["original_name"],
     }
 
@@ -254,9 +257,8 @@ def delete_attachment(attachment_id: int, user: dict = Depends(require_user)):
             raise HTTPException(403, "Not yours")
         if row["post_status"] != "draft":
             raise HTTPException(400, "Can't edit a submitted article")
-        f = UPLOAD_DIR / row["file_path"]
-        if f.exists():
-            f.unlink()
+        f = row["file_path"]
+        delete_key(f)
         conn.execute("DELETE FROM post_attachments WHERE id = ?", (attachment_id,))
         conn.commit()
     return {"ok": True}
@@ -275,7 +277,7 @@ def magazine_pdf(download: bool = False):
     if not posts:
         raise HTTPException(404, "No articles have been published yet")
 
-    pdf_bytes = build_magazine_pdf(posts, UPLOAD_DIR)
+    pdf_bytes = build_magazine_pdf(posts)
     disposition = "attachment" if download else "inline"
     return Response(
         content=pdf_bytes,
@@ -303,7 +305,8 @@ def react_to_post(post_id: int, reaction: str = Form(...), user: dict = Depends(
     return {"my_reaction": result, "like_count": likes, "dislike_count": dislikes}
 
 
-# Uploaded images/videos/files
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
-# Frontend (must be mounted last — it's a catch-all for "/")
+# Frontend (must be mounted last — it's a catch-all for "/"). Uploaded
+# images/videos/files are no longer served from here — they live on
+# Cloudflare R2 now (see storage.py) and are served directly from R2's
+# own public URL, so there's no local /uploads mount to register.
 app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")

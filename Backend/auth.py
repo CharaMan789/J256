@@ -2,7 +2,7 @@ import os
 
 from authlib.integrations.starlette_client import OAuth
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 
 from database import get_conn
 from pseudonyms import generate_pseudonym
@@ -23,6 +23,28 @@ oauth.register(
 
 router = APIRouter()
 
+# Every response below that either sets the session cookie or reveals who
+# it belongs to (login, callback, logout, /auth/me) gets these headers.
+# Without them, a shared cache sitting between the browser and this
+# server — a campus wifi proxy, Render's edge, a browser's own back/
+# forward cache — is technically permitted to store the response and
+# replay it to a *different* person who requests the same URL shortly
+# after. For /auth/callback that would replay someone else's Set-Cookie;
+# for /auth/me it would replay someone else's signed-in identity straight
+# into a new visitor's UI. This is a well-documented class of bug (search
+# "Set-Cookie CDN cache cross-user leak") and the fix is exactly this:
+# tell every cache in the path, explicitly, that these responses are
+# private to the one request that produced them and must never be stored
+# or reused for anyone else.
+NO_STORE_HEADERS = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, private",
+    "Pragma": "no-cache",
+}
+
+
+def _no_store_redirect(url: str) -> RedirectResponse:
+    return RedirectResponse(url, headers=NO_STORE_HEADERS)
+
 
 @router.get("/auth/login")
 async def login(request: Request):
@@ -40,7 +62,9 @@ async def login(request: Request):
             "GOOGLE_CLIENT_SECRET in backend/.env — see README.md.",
         )
     redirect_uri = request.url_for("auth_callback")
-    return await oauth.google.authorize_redirect(request, redirect_uri, hd=ALLOWED_DOMAIN)
+    resp = await oauth.google.authorize_redirect(request, redirect_uri, hd=ALLOWED_DOMAIN)
+    resp.headers.update(NO_STORE_HEADERS)
+    return resp
 
 
 @router.get("/auth/callback", name="auth_callback")
@@ -48,11 +72,11 @@ async def auth_callback(request: Request):
     try:
         token = await oauth.google.authorize_access_token(request)
     except Exception:
-        return RedirectResponse(f"{FRONTEND_URL}/?error=login_failed")
+        return _no_store_redirect(f"{FRONTEND_URL}/?error=login_failed")
 
     userinfo = token.get("userinfo")
     if not userinfo or not userinfo.get("email"):
-        return RedirectResponse(f"{FRONTEND_URL}/?error=login_failed")
+        return _no_store_redirect(f"{FRONTEND_URL}/?error=login_failed")
 
     email = userinfo["email"].lower()
 
@@ -60,7 +84,7 @@ async def auth_callback(request: Request):
     # bypass it (e.g. by hitting the OAuth URL directly), so the domain is
     # re-checked here, server-side, same as before.
     if not email.endswith(f"@{ALLOWED_DOMAIN}"):
-        return RedirectResponse(f"{FRONTEND_URL}/?error=iiser_domain_mismatch")
+        return _no_store_redirect(f"{FRONTEND_URL}/?error=iiser_domain_mismatch")
 
     name = userinfo.get("name") or email.split("@")[0]
     picture = userinfo.get("picture")
@@ -84,18 +108,18 @@ async def auth_callback(request: Request):
             conn.commit()
 
     request.session["user_id"] = user_id
-    return RedirectResponse(FRONTEND_URL)
+    return _no_store_redirect(FRONTEND_URL)
 
 
 @router.get("/auth/logout")
 async def logout(request: Request):
     request.session.clear()
-    return RedirectResponse(FRONTEND_URL)
+    return _no_store_redirect(FRONTEND_URL)
 
 
 @router.get("/auth/me")
 async def me(request: Request):
-    return get_current_user(request)
+    return JSONResponse(content=get_current_user(request), headers=NO_STORE_HEADERS)
 
 
 def get_current_user(request: Request):

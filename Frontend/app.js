@@ -386,10 +386,10 @@ function opBadgeHtml(isOp) {
 function attachmentsRow(atts) {
   if (!atts || atts.length === 0) return "";
   return `<div class="post-card-attachments">${atts.map(a => {
-    if (a.kind === "video") return `<video src="${API}${a.url}" controls></video>`;
-    if (a.kind === "audio") return `<audio src="${API}${a.url}" controls></audio>`;
-    if (a.kind === "file") return `<div class="doc-attachment-file">${ICONS.file} <a href="${API}${a.url}" target="_blank">${escapeHtml(a.original_name)}</a></div>`;
-    return `<img src="${API}${a.url}" alt="">`;
+    if (a.kind === "video") return `<video src="${a.url}" controls></video>`;
+    if (a.kind === "audio") return `<audio src="${a.url}" controls></audio>`;
+    if (a.kind === "file") return `<div class="doc-attachment-file">${ICONS.file} <a href="${a.url}" target="_blank">${escapeHtml(a.original_name)}</a></div>`;
+    return `<img src="${a.url}" alt="">`;
   }).join("")}</div>`;
 }
 
@@ -917,10 +917,10 @@ async function renderArticleDetail(id) {
   try {
     const a = await fetchJSON(`${API}/posts/${id}`);
     const media = a.attachments.map(att => {
-      if (att.kind === "image") return `<img src="${API}${att.url}" alt="">`;
-      if (att.kind === "video") return `<video src="${API}${att.url}" controls></video>`;
-      if (att.kind === "audio") return `<audio src="${API}${att.url}" controls></audio>`;
-      return `<div class="doc-attachment-file">${ICONS.file} <a href="${API}${att.url}" target="_blank">${escapeHtml(att.original_name)}</a></div>`;
+      if (att.kind === "image") return `<img src="${att.url}" alt="">`;
+      if (att.kind === "video") return `<video src="${att.url}" controls></video>`;
+      if (att.kind === "audio") return `<audio src="${att.url}" controls></audio>`;
+      return `<div class="doc-attachment-file">${ICONS.file} <a href="${att.url}" target="_blank">${escapeHtml(att.original_name)}</a></div>`;
     }).join("");
     appEl.innerHTML = `
       <div class="page-wrap">
@@ -1134,9 +1134,9 @@ function renderAttachmentsList() {
   if (!container) return;
   container.innerHTML = composeDraft.attachments.map(att => {
     let inner;
-    if (att.kind === "image") inner = `<img src="${API}${att.url}" alt="">`;
-    else if (att.kind === "video") inner = `<video src="${API}${att.url}" controls></video>`;
-    else if (att.kind === "audio") inner = `<audio src="${API}${att.url}" controls></audio>`;
+    if (att.kind === "image") inner = `<img src="${att.url}" alt="">`;
+    else if (att.kind === "video") inner = `<video src="${att.url}" controls></video>`;
+    else if (att.kind === "audio") inner = `<audio src="${att.url}" controls></audio>`;
     else inner = `<div class="doc-attachment-file">${ICONS.file} ${escapeHtml(att.original_name)}</div>`;
     return `
       <div class="doc-attachment" data-id="${att.id}">

@@ -1,5 +1,3 @@
-import shutil
-import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Form, File, UploadFile, HTTPException, Depends, Query
@@ -8,16 +6,9 @@ from auth import require_user, get_current_user
 from database import get_conn
 from pseudonyms import generate_pseudonym
 from reactions import reaction_counts, my_reaction, toggle_reaction
+from storage import upload_fileobj, delete_key, public_url
 
 router = APIRouter()
-
-BASE_DIR = Path(__file__).parent
-# Capital "Frontend" — must match the exact folder name in the repo (see
-# the same fix already applied in main.py). Render's Linux filesystem is
-# case-sensitive, so a lowercase mismatch here silently points at a
-# folder that doesn't exist — every image/video attachment save then
-# fails, and any discussion/announcement/reply with a file 500s.
-UPLOAD_DIR = BASE_DIR.parent / "Frontend" / "uploads"
 
 VALID_TYPES = {"poll", "discussion", "announcement"}
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm", ".mkv", ".avi"}
@@ -59,7 +50,10 @@ def _attachments_for(conn, owner_type, owner_id):
         {
             "id": r["id"],
             "kind": r["kind"],
-            "url": f"/uploads/{r['file_path']}",
+            # file_path stores the R2 object key (not a local filesystem
+            # path — the column name predates the R2 migration, kept as-is
+            # so no schema/migration was needed to make this switch).
+            "url": public_url(r["file_path"]),
             "original_name": r["original_name"],
         }
         for r in rows
@@ -78,14 +72,15 @@ def _save_attachments(conn, owner_type, owner_id, files):
             kind = "audio"
         else:
             kind = "image"
-        stored_name = f"{uuid.uuid4().hex}{ext}"
-        dest = UPLOAD_DIR / stored_name
-        with dest.open("wb") as out:
-            shutil.copyfileobj(f.file, out)
+        # Uploaded straight to R2 (Cloudflare object storage) instead of
+        # local disk — survives every Render redeploy/restart/spin-down,
+        # since it lives completely outside the app server's own
+        # filesystem. See storage.py for why this exists.
+        object_key = upload_fileobj(f.file, f.filename)
         conn.execute(
             "INSERT INTO explore_attachments (owner_type, owner_id, kind, file_path, original_name) "
             "VALUES (?, ?, ?, ?, ?)",
-            (owner_type, owner_id, kind, stored_name, f.filename),
+            (owner_type, owner_id, kind, object_key, f.filename),
         )
 
 
@@ -347,9 +342,7 @@ def delete_explore_post(post_id: int, user: dict = Depends(require_user)):
             ).fetchall())
 
         for a in att_rows:
-            f = UPLOAD_DIR / a["file_path"]
-            if f.exists():
-                f.unlink()
+            delete_key(a["file_path"])
 
         conn.execute("DELETE FROM explore_attachments WHERE owner_type = 'post' AND owner_id = ?", (post_id,))
         if reply_ids:

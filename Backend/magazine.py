@@ -11,6 +11,8 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Image as RLImage
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer
 
+from storage import download_bytes
+
 try:
     from PIL import Image as PILImage
 except ImportError:
@@ -113,7 +115,7 @@ def _pdf_font_name(css_font_value: str) -> str:
     return _PDF_FONT_MAP.get(css_font_value.strip().lower(), "Times-Roman")
 
 
-def build_magazine_pdf(posts: list[dict], upload_dir: Path) -> bytes:
+def build_magazine_pdf(posts: list[dict]) -> bytes:
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer, pagesize=A4,
@@ -159,13 +161,13 @@ def build_magazine_pdf(posts: list[dict], upload_dir: Path) -> bytes:
 
         for att in post.get("attachments", []):
             if att["kind"] == "image":
-                img_path = upload_dir / Path(att["url"]).name
-                if img_path.exists():
+                img_bytes = download_bytes(att.get("storage_key")) if att.get("storage_key") else None
+                if img_bytes:
                     try:
                         avail_width = doc.width
                         ratio = 0.6
                         if PILImage:
-                            with PILImage.open(img_path) as im:
+                            with PILImage.open(BytesIO(img_bytes)) as im:
                                 w, h = im.size
                             if w:
                                 ratio = h / w
@@ -175,7 +177,7 @@ def build_magazine_pdf(posts: list[dict], upload_dir: Path) -> bytes:
                             height = max_height
                             avail_width = height / ratio if ratio else avail_width
                         story.append(Spacer(1, 10))
-                        story.append(RLImage(str(img_path), width=avail_width, height=height))
+                        story.append(RLImage(BytesIO(img_bytes), width=avail_width, height=height))
                         story.append(Spacer(1, 10))
                     except Exception:
                         story.append(Paragraph(f"[image: {_escape(att['original_name'])}]", styles["attachment_note"]))
